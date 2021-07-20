@@ -1,0 +1,118 @@
+#! /usr/bin/python2.7
+import argparse
+import logging
+import os
+import sys
+import subprocess
+import signal
+from lib.parameters import TargetParams
+from lib.packets import Handler
+from lib.sniffer import Sniffer
+
+def channelSet(nic, chan):
+    """Set the channel for a given NIC"""
+    subprocess.call('iwconfig %s channel %s' % (nic, chan), shell=True)
+
+
+def crtlC(args):
+    """Handle CTRL+C."""
+    def tmp(signal, frame):
+        print('[!] Crtl + C')
+        sys.exit(0)
+    return tmp
+
+
+def main(args):
+    """Launching logic"""
+
+    ## Enforce BSSID if WEP is chosen
+    if args.wep is not None and args.bssid is None:
+        print('--wep requires --bssid\n')
+        sys.exit(1)
+
+    ## Enforce BSSID and ESSID if WPA is chosen
+    if args.wpa is not None and (args.bssid is None or args.essid is None):
+        print('--wpa requires --bssid and --essid\n')
+        sys.exit(1)
+
+    ## Lowercase BSSID
+    if args.bssid is not None:
+        args.bssid = args.bssid.lower()
+
+    ## NIC types
+    if args.inj is None:
+        args.inj = 'mon'
+    if args.mon is None:
+        args.mon = 'mon'
+
+    ## User printouts
+    #os.system('clear')
+    print('\nairpwn-ng - core functions')
+
+    ### Add error checks
+    ## Set channel if so desired
+    if args.channel is not None:
+        print('[+] Setting NIC Channel to {0}'.format(args.channel))
+
+        ## Set monitor nic
+        if args.mon == 'mon':
+            channelSet(args.m, args.channel)
+
+        ## Set injector nic
+        if args.inj == 'mon':
+            channelSet(args.i, args.channel)
+
+    ## Launch the handler
+    tParams = TargetParams(inject_file = args.injection)
+    etl = Handler(Args = args, i = args.i, tParams = tParams)
+
+    ## Begin sniffing
+    snif = Sniffer(etl, args, m = args.m)
+    snif.threaded_sniff(args)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description = 'airpwn-ng - core functions')
+    parser.add_argument('-i',
+                        metavar = '<interface>',
+                        help = 'Your injection interface')
+    parser.add_argument('-m',
+                        metavar = '<interface>',
+                        help = 'Your monitor interface')
+    parser.add_argument('--bssid',
+                        metavar = '<tgt BSSID>',
+                        help = 'Target BSSID')
+    parser.add_argument('--channel',
+                        metavar = '<channel>',
+                        help = 'Set the channel for the NICs')
+    parser.add_argument('--essid',
+                        metavar = '<tgt ESSID>',
+                        help = 'Target ESSID')
+    parser.add_argument('--inj',
+                        choices = ['mon', 'man'],
+                        metavar = '<inj NIC type>',
+                        help = 'Injector NIC type - mon or man')
+    parser.add_argument('--injection',
+                       metavar = '<filename>',
+                       help = 'File with your injection code')
+    parser.add_argument('--mon',
+                        choices = ['mon', 'man'],
+                        metavar = '<mon nic type>',
+                        help = 'Monitor NIC type - mon or man')
+    parser.add_argument('--trigger',
+                        metavar = '<trigger>',
+                        help = 'Trigger string for injection')
+    parser.add_argument('--wep',
+                        metavar = '<wep password>',
+                        help = 'Password for WEP')
+    parser.add_argument('--wpa',
+                        metavar = '<wpa password>',
+                        help = 'Password for WPA')
+    args = parser.parse_args()
+
+    ## Crtl + C handling
+    signal_handler = crtlC(args)
+    signal.signal(signal.SIGINT, signal_handler)
+
+    ## Launch
+    main(args)
