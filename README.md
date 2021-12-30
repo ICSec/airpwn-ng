@@ -20,12 +20,12 @@ python3 ./airpwn-ng -i wlan0mon -m wlan0mon --injection payloads/demo --channel 
 ```
 python2 -m pip install _python2/RESOURCEs/*.tar.gz
 cd _python2
-python2 ./airpwn-ng -i wlan1mon -m wlan1mon --injection payloads/wargames.html --channel 6 -s 5 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
+python2 ./airpwn-ng -i wlan1mon -m wlan1mon --injection payloads/demo --channel 6 -s 5 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
 ```
 
 ### WPA
 ```
 python2 -m pip install _python2/RESOURCEs/*.tar.gz
 cd _python2
-python2 ./airpwn-ng -i wlan1mon -m wlan1mon --bssid 'aa:bb:cc:dd:ee:ff' --essid 'ZerosAndOnes' --wpa 'SuperHardPassword' --injection payloads/wargames
+python2 ./airpwn-ng -i wlan1mon -m wlan1mon --bssid 'aa:bb:cc:dd:ee:ff' --essid 'ZerosAndOnes' --wpa 'SuperHardPassword' --injection payloads/demo
 ```
