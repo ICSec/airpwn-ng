@@ -1,11 +1,5 @@
-## Python3
-try:
-    from queue import Queue, Empty
-## Python2
-except ImportError:
-    from Queue import Queue, Empty
-
 import binascii
+from queue import Queue, Empty
 
 class VictimParameters(object):
     """An instance of this class is always necessary to run the application

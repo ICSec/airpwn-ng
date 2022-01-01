@@ -11,19 +11,22 @@ Illicit usage of this code has the potential to land the user in Legal and/or Ci
 * http://airpwn.sourceforge.net/Documentation.html
 
 ### Open Wireless
+Can be implemented with one NIC in monitor mode.
 ```
 python3 -m pip install RESOURCEs/*.tar.gz
 python3 ./airpwn-ng -i wlan0mon -m wlan0mon --injection payloads/demo --channel 6 -s 5 -w 30
 ```
 
 ### WEP
+Requires one NIC in managed mode as a workaround until the WEP encryption is fixed.
 ```
 python2 -m pip install _python2/RESOURCEs/*.tar.gz
 cd _python2
-python2 ./airpwn-ng -i wlan1mon -m wlan1mon --injection payloads/demo --channel 6 -s 5 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
+python2 ./airpwn-ng -i wlan0 --inj man -m wlan1mon --injection payloads/demo --channel 6 -s 5 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
 ```
 
 ### WPA
+Can be implemented with one NIC in monitor mode.
 ```
 python2 -m pip install _python2/RESOURCEs/*.tar.gz
 cd _python2

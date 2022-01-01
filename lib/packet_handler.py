@@ -65,16 +65,16 @@ class PacketHandler(object):
             if self.trigger in request:
 
                 ## MONITOR MODE
-                if self.nic == 'mon':
-                    rtrmac = packet.getlayer(Dot11).addr1
-                    vicmac = packet.getlayer(Dot11).addr2
-                    dstmac = packet.getlayer(Dot11).addr3
+                # if self.nic == 'mon':
+                rtrmac = packet.getlayer(Dot11).addr1
+                vicmac = packet.getlayer(Dot11).addr2
+                dstmac = packet.getlayer(Dot11).addr3
 
-                ## TAP MODE
-                else:
-                    rtrmac = packet.getlayer(Ether).dst
-                    vicmac = packet.getlayer(Ether).src
-                    dstmac = 'TAP'
+                # ## TAP MODE
+                # else:
+                #     rtrmac = packet.getlayer(Ether).dst
+                #     vicmac = packet.getlayer(Ether).src
+                #     dstmac = 'TAP'
 
 
                 vicip = packet.getlayer(IP).src
@@ -134,11 +134,11 @@ class PacketHandler(object):
         If no victims List is set, meaning it's in broadcast mode, it checks
         for the victim in PacketHandler.newvictims and gets the injection for it,
         if there is one, and injects it via Injector.inject().
-        
-        
+
+
         Gutting some of the logic to concentrate on injection speed
         """
-        
+
         ## Broadcast mode
         if len(self.victims) == 0:
 
