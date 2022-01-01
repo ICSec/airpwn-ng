@@ -1,14 +1,8 @@
-## Python 3
-try:
-    from queue import Queue, Empty
-## Python 2
-except ImportError:
-    from Queue import Queue, Empty
-
 import sys
 import time
 from pyDot11 import *
 from lib.visuals import Bcolors
+from queue import Queue, Empty
 from scapy.layers.dot11 import Dot11, Dot11WEP
 from scapy.layers.eap import EAPOL
 from scapy.sendrecv import sniff

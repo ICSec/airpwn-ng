@@ -1,9 +1,8 @@
-#! /usr/bin/python2.7
+#! /usr/bin/python3
 
 import argparse
 import logging
 import os
-#import pysnooper                                                               ## Uncomment to use pysnooper tracing
 import signal
 import subprocess
 import sys
@@ -38,10 +37,9 @@ def injection_check(args):
     return injection
 
 
-#@pysnooper.snoop('./air.log')             ## Uncomment to use pysnooper tracing
 def main(args):
     """Launching logic"""
-    
+
     ## Backpressure defaults
     if args.w is not None:
         args.bWarn = int(args.w)
@@ -119,16 +117,17 @@ def main(args):
             channelSet(args.i, args.channel)
 
     ## Injection Logic
-    injection = 0
+    # injection = 0
     injection = injection_check(args)
 
+    ## Broadcast mode
     if args.t is None:
-        ## Broadcast mode
         print (Bcolors.WARNING + '[!] You are starting your attack in broadcast mode.')
         print ('[!] This means you will inject packets into all clients you are able to detect.')
         print ('[!] Use with caution.' + Bcolors.ENDC)
+
+    ## Targeted mode
     else:
-        ## Targeted mode
         if len(args.t) == 0:
             print (Bcolors.WARNING + '[!] You must specify at least one target MAC address with -t for targeted mode')
             exit(1)

