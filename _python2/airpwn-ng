@@ -46,7 +46,6 @@ def main(args):
         args.mon = 'mon'
 
     ## User printouts
-    #os.system('clear')
     print('\nairpwn-ng - core functions')
 
     ### Add error checks

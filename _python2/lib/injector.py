@@ -183,8 +183,6 @@ class Injector(object):
 
 
         ## Inject
-        print(packet.show())
-        print(self.interface)
         sendp(packet, iface = self.interface, verbose = False)
         # gs(self.injSocket, packet, verbose = False)
         print('[*] Packet injected to {0}'.format(vicmac))
