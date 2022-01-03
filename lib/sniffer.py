@@ -3,7 +3,7 @@ import time
 from pyDot11 import *
 from lib.visuals import Bcolors
 from queue import Queue, Empty
-from scapy.layers.dot11 import Dot11, Dot11WEP
+from scapy.layers.dot11 import Dot11, Dot11FCS, Dot11WEP
 from scapy.layers.eap import EAPOL
 from scapy.sendrecv import sniff
 from threading import Thread
@@ -85,11 +85,13 @@ class Sniffer(object):
 
             ## Decrypt
             try:
-                pkt, iVal = wepDecrypt(pkt, args.wep, False)
-                #print pkt.summary()
-            except:
+                # if pkt.haslayer(Dot11FCS):
+                if pkt.haslayer(Dot11):
+                    pkt, iVal = wepDecrypt(pkt, args.wep, False)
+            except Exception as E:
                 sys.stdout.write(Bcolors.FAIL + '\n[!] pyDot11 did not work\n[!] Decryption failed\n ' + Bcolors.ENDC)
                 sys.stdout.flush()
+                print(E)
                 return
 
         ## Process and finish out the task

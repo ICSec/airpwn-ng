@@ -7,10 +7,6 @@ from scapy.layers.inet import IP, TCP
 from scapy.packet import Raw
 from scapy.utils import wrpcap
 
-## GLOBALS
-global BLOCK_HOSTS
-BLOCK_HOSTS = set()
-
 class PacketHandler(object):
     """This class does all the heavy-lifting.
 
@@ -64,6 +60,9 @@ class PacketHandler(object):
             request = self.requestExtractor(packet)
             if self.trigger in request:
 
+                ### DEBUG
+                # wrpcap('decryptedSniff.pcap', packet)
+
                 ## MONITOR MODE
                 # if self.nic == 'mon':
                 rtrmac = packet.getlayer(Dot11).addr1
@@ -84,7 +83,6 @@ class PacketHandler(object):
                 size = len(packet.getlayer(TCP).load)
                 acknum = str(int(packet.getlayer(TCP).seq) + size)
                 seqnum = packet.getlayer(TCP).ack
-                global BLOCK_HOSTS
                 # wrpcap('inbound.pcap', packet)
             else:
                 return 0
