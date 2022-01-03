@@ -20,9 +20,8 @@ python3 ./airpwn-ng -i wlan0mon -m wlan0mon --injection payloads/demo --channel 
 ### WEP
 Requires one NIC in managed mode as a workaround until the WEP encryption is fixed.
 ```
-python2 -m pip install _python2/RESOURCEs/*.tar.gz
-cd _python2
-python2 ./airpwn-ng -i wlan0 --inj man -m wlan1mon --injection payloads/demo --channel 6 -s 5 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
+python3 -m pip install RESOURCEs/*.tar.gz
+python3 ./airpwn-ng -i wlan0 --inj man -m wlan1mon --injection payloads/demo --channel 6 --wep 0000000000 --bssid AA:BB:CC:DD:EE:FF
 ```
 
 ### WPA
