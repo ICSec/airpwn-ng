@@ -1,4 +1,7 @@
 ## Overview
+
+[![Join the chat at https://gitter.im/ICSec/airpwn-ng](https://badges.gitter.im/ICSec/airpwn-ng.svg)](https://gitter.im/ICSec/airpwn-ng?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 * We force the target's browser to do what we want
 * Demo video: https://www.youtube.com/watch?v=hiyaUZh-UiU
 
