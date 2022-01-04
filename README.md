@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/ICSec/airpwn-ng](https://badges.gitter.im/ICSec/airpwn-ng.svg)](https://gitter.im/ICSec/airpwn-ng?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-* We force the target's browser to do what we want
+* Packet injection framework centered around 802.11
 * Demo video: https://www.youtube.com/watch?v=hiyaUZh-UiU
 
 ## Disclaimer
@@ -10,8 +10,8 @@ Illicit usage of this code has the potential to land the user in Legal and/or Ci
 
 ## How do we do it?
 * We decrypt, interpret, create, encrypt and inject packets into and from a live TCP stream.
-* For a more detailed and in-depth explanation as to how this occurs, read the original documentation for airpwn:
 * http://airpwn.sourceforge.net/Documentation.html
+* https://github.com/ICSec/dc25
 
 ### Open Wireless
 Can be implemented with one NIC in monitor mode.
