@@ -17,7 +17,7 @@ Illicit usage of this code has the potential to land the user in Legal and/or Ci
 Can be implemented with one NIC in monitor mode.
 ```
 python3 -m pip install RESOURCEs/*.tar.gz
-python3 ./airpwn-ng -i wlan0mon -m wlan0mon --injection payloads/demo --channel 6 -s 5 -w 30
+python3 ./airpwn-ng -i wlan0mon -m wlan0mon --injection payloads/demo --channel 6
 ```
 
 ### WEP
