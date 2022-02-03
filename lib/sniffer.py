@@ -122,44 +122,28 @@ class Sniffer(object):
         sniffer = Thread(target = self.sniff, args = (q,))
         sniffer.daemon = True
         sniffer.start()
+        warningTimer = 0
 
         ## Sniffing in Monitor Mode for Open wifi
         if args.mon == 'mon' and not args.wep and not args.wpa:
-
-            """
-            It is worth bringing up an error which should not occur, but does
-
-              File "./airpwn-ng", line 210, in <module>
-                main(args)
-              File "./airpwn-ng", line 137, in main
-                style.handler(args)
-              File "/stuffz/bin/hub/myHub/_wifi/airpwn-ng/lib/styles.py", line 33, in handler
-                snif.threaded_sniff(args) ## Here
-              File "/stuffz/bin/hub/myHub/_wifi/airpwn-ng/lib/sniffer.py", line 178, in threaded_sniff
-                if pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
-              File "/usr/local/lib/python3.8/dist-packages/scapy/packet.py", line 1185, in __getitem__
-                raise IndexError("Layer [%s] not found" % lname)
-            IndexError: Layer [Dot11] not found
-
-            Not sure why [Dot11] doesn't exist...
-            """
 
             ## BSSID filtering and Speedpatch
             if args.bssid and not args.b:
                 print('Speedpatch && BSSID filtering\n** Mode broken ~ wait for patch')
                 exit(0)
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                        pkt = q.get(timeout = 1)
-                        if pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
-                            self.handler(q, self.m, pkt, args)
-                        else:
-                            pass
-                    except Empty:
-                        pass
+                # warningTimer = 0
+                # while True:
+                #     try:
+                #         x = q.qsize()
+                #         if x > self.bp:
+                #             print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                #         pkt = q.get(timeout = 1)
+                #         if pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
+                #             self.handler(q, self.m, pkt, args)
+                #         else:
+                #             pass
+                #     except Empty:
+                #         pass
 
             ## NO Speedpatch and NO BSSID filtering
             elif args.b and not args.bssid:
@@ -168,7 +152,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
                         if (pkt[Dot11].FCfield == 1 or pkt[Dot11].FCfield == 2) and len(pkt) >= int(args.s):
                             self.handler(q, self.m, pkt, args)
@@ -181,19 +167,19 @@ class Sniffer(object):
             elif args.bssid and args.b:
                 print('No Speedpatch && BSSID filtering\n** Mode broken ~ wait for patch')
                 exit(0)
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                        pkt = q.get(timeout = 1)
-                        if (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s)) or\
-                            (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 2 and len(pkt) >= int(args.s)):
-                            self.handler(q, self.m, pkt, args)
-                        else:
-                            pass
-                    except Empty:
-                        pass
+                # while True:
+                #     try:
+                #         x = q.qsize()
+                #         if x > self.bp:
+                #             print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                #         pkt = q.get(timeout = 1)
+                #         if (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s)) or\
+                #             (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 2 and len(pkt) >= int(args.s)):
+                #             self.handler(q, self.m, pkt, args)
+                #         else:
+                #             pass
+                #     except Empty:
+                #         pass
 
             ## Speedpatch and NO BSSID filtering
             else:
@@ -202,7 +188,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
                         if pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
                             self.handler(q, self.m, pkt, args)
@@ -219,7 +207,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
                         if pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s):
                             self.handler(q, self.m, pkt, args)
@@ -235,7 +225,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
                         if (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s)) or (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 66 and len(pkt) >= int(args.s)):
                             self.handler(q, self.m, pkt, args)
@@ -254,7 +246,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
 
                         if pkt.haslayer(EAPOL):
@@ -287,7 +281,9 @@ class Sniffer(object):
                     try:
                         x = q.qsize()
                         if x > self.bp:
-                            print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                            if time.time() - warningTimer > 5:
+                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                                warningTimer = time.time()
                         pkt = q.get(timeout = 1)
                         if pkt.haslayer(EAPOL):
                             self.shake.eapolGrab(pkt)

@@ -28,7 +28,7 @@ python3 ./airpwn-ng -i wlan0 --inj man -m wlan1mon --injection payloads/demo --c
 ```
 
 ### WPA
-Can be implemented with one NIC in monitor mode.
+Can be implemented with one NIC in monitor mode; use WEP workaround if needed.
 ```
 python2 -m pip install _python2/RESOURCEs/*.tar.gz
 cd _python2
