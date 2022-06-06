@@ -9,6 +9,7 @@ class Victim(object):
     """
 
     def __init__(self, *positional_parameters, **keyword_parameters):
+        self.cookies = []
         self.ip = keyword_parameters.get('ip')
         self.mac = keyword_parameters.get('mac')
         self.victim_parameters = keyword_parameters.get('victim_parameters')
@@ -20,3 +21,11 @@ class Victim(object):
         if self.victim_parameters is None:
             print ('[ERROR] Please create VictimParameters for this Victim')
             exit(1)
+
+
+    def get_injection(self):
+        '''Returns injection for victim
+        
+        gutting for speed -- soon to remove'''
+        return self.victim_parameters.file_inject
+
