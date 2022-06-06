@@ -1,6 +1,5 @@
 import sys
 import time
-from pyDot11 import *
 from lib.visuals import Bcolors
 from queue import Queue, Empty
 from scapy.layers.dot11 import Dot11, Dot11FCS, Dot11WEP
@@ -17,18 +16,9 @@ class Sniffer(object):
 
     def __init__(self, packethandler, args, *positional_parameters, **keyword_parameters):
         self.m = keyword_parameters.get('m')
-        if self.m is None:
-            print ('[ERROR] No monitor interface selected')
-            exit()
 
+        ## Create the handler
         self.packethandler = packethandler
-
-        if args.wpa:
-
-            ### DEBUG ~~> pcap intake
-            self.shake = Handshake(psk = args.wpa, essid = args.essid, pcap = False)
-
-            self.packethandler.injector.shake = self.shake
 
         ## Backpressure warnings
         self.bp = args.bWarn
@@ -39,76 +29,11 @@ class Sniffer(object):
         sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
 
 
-    def handler(self, q, m, pkt, args):
-        """This function exists solely to reduce lines of code
-
-        This function has been changed a bit to have the processing,
-        moved to within the try: for WPA and WEP
-        If errors are seen where pyDot11 fails to process, and
-        airpwn-ng starts to hang, move self.packethandler.process()
-        out from under the try/except like it previously was
-        """
-
-        ### This might need a different structure for self.shake bridge
-        ### Multiple vics might collide...
-        ## WPA
-        if args.wpa:
-
-            ### dict tk and use tgtMAC as key, tk as value
-            #tk = self.shake.tgtInfo.get(self.tgtMAC)
-
-            ## eType tagalong via packerhandler.eType when rdy for tkip
-            eType = self.shake.encDict.get(self.tgtMAC)
-
-            ### tkip vs ccmp decision pt for now
-            if eType == 'ccmp':
-                encKey = self.shake.tgtInfo.get(self.tgtMAC)[1]
-            else:
-                encKey = self.shake.tgtInfo.get(self.tgtMAC)[0]
-
-            ## Decrypt
-            try:
-                self.packethandler.injector.shake.origPkt = pkt
-                pkt,\
-                self.packethandler.injector.shake.PN = wpaDecrypt(encKey,
-                                                                  pkt,
-                                                                  eType,
-                                                                  False)
-                #print pkt.summary()
-            except:
-                sys.stdout.write(Bcolors.FAIL + '\n[!] pyDot11 did not work\n[!] Decryption failed\n ' + Bcolors.ENDC)
-                sys.stdout.flush()
-                return
-
-        ## WEP
-        elif args.wep:
-
-            ## Decrypt
-            try:
-                # if pkt.haslayer(Dot11FCS):
-                if pkt.haslayer(Dot11):
-                    pkt, iVal = wepDecrypt(pkt, args.wep, False)
-            except Exception as E:
-                sys.stdout.write(Bcolors.FAIL + '\n[!] pyDot11 did not work\n[!] Decryption failed\n ' + Bcolors.ENDC)
-                sys.stdout.flush()
-                print(E)
-                return
-
-        ## Process and finish out the task
-        self.packethandler.process(m, pkt, args)
-        q.task_done()
-
-
     def threaded_sniff(self, args):
         """This starts a Queue which receives packets and processes them.
 
         It uses the PacketHandler.process function.
         Call this function to begin actual sniffing + injection.
-
-        If args.b is thrown, a two-way sniff is implemented
-        Otherwise airpwn-ng will only look at packets headed outbound
-        While airpwn-ng only hijacks inbound frames to begin with,
-        -b is useful for grabbing data inbound from a server
 
         Useful reminder:
             to-DS is:    1 (open) / 65 (crypted)
@@ -124,185 +49,24 @@ class Sniffer(object):
         sniffer.start()
         warningTimer = 0
 
-        ## Sniffing in Monitor Mode for Open wifi
-        if args.mon == 'mon' and not args.wep and not args.wpa:
+        while True:
+            try:
+                x = q.qsize()
+                if x > self.bp:
+                    if time.time() - warningTimer > 5:
+                        print('                                                                               {0} backpressure warning'.format(q.qsize()))
+                        warningTimer = time.time()
+                pkt = q.get(timeout = 1)
+                if args.tun is False:
 
-            ## BSSID filtering and Speedpatch
-            if args.bssid and not args.b:
-                print('Speedpatch && BSSID filtering\n** Mode broken ~ wait for patch')
-                exit(0)
-                # warningTimer = 0
-                # while True:
-                #     try:
-                #         x = q.qsize()
-                #         if x > self.bp:
-                #             print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                #         pkt = q.get(timeout = 1)
-                #         if pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
-                #             self.handler(q, self.m, pkt, args)
-                #         else:
-                #             pass
-                #     except Empty:
-                #         pass
+                    ## Process and finish out the task
+                    if pkt[Dot11].FCfield == 1:
+                        self.packethandler.process(self.m, pkt, args)
+                        q.task_done()
 
-            ## NO Speedpatch and NO BSSID filtering
-            elif args.b and not args.bssid:
-                print('No Speedpatch && No BSSID filtering')
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-                        if (pkt[Dot11].FCfield == 1 or pkt[Dot11].FCfield == 2) and len(pkt) >= int(args.s):
-                            self.handler(q, self.m, pkt, args)
-                        else:
-                            pass
-                    except Empty:
-                        pass
-
-            ## BSSID filtering and NO Speedpatch
-            elif args.bssid and args.b:
-                print('No Speedpatch && BSSID filtering\n** Mode broken ~ wait for patch')
-                exit(0)
-                # while True:
-                #     try:
-                #         x = q.qsize()
-                #         if x > self.bp:
-                #             print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                #         pkt = q.get(timeout = 1)
-                #         if (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s)) or\
-                #             (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 2 and len(pkt) >= int(args.s)):
-                #             self.handler(q, self.m, pkt, args)
-                #         else:
-                #             pass
-                #     except Empty:
-                #         pass
-
-            ## Speedpatch and NO BSSID filtering
-            else:
-                print ('Speedpatch && No BSSID filtering')
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-                        if pkt[Dot11].FCfield == 1 and len(pkt) >= int(args.s):
-                            self.handler(q, self.m, pkt, args)
-                    except Empty:
-                        pass
-
-        ## Sniffing in Monitor Mode for WEP
-        elif args.mon == 'mon' and args.wep:
-
-            ## BSSID filtering and Speedpatch
-            if args.bssid and not args.b:
-                #print 'BSSID filtering and Speedpatch\n'
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-                        if pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s):
-                            self.handler(q, self.m, pkt, args)
-                        else:
-                            pass
-                    except Empty:
-                        pass
-
-            ## BSSID filtering and NO Speedpatch
-            elif args.bssid and args.b:
-                #print 'BSSID filtering and NO Speedpatch\n'
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-                        if (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s)) or (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 66 and len(pkt) >= int(args.s)):
-                            self.handler(q, self.m, pkt, args)
-                        else:
-                            pass
-                    except Empty:
-                        pass
-
-        ## Sniffing in Monitor Mode for WPA
-        elif args.mon == 'mon' and args.wpa:
-
-            ## BSSID filtering and Speedpatch
-            if args.bssid and not args.b:
-                #print 'BSSID filtering and Speedpatch\n'
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-
-                        if pkt.haslayer(EAPOL):
-                            self.shake.eapolGrab(pkt)
-
-                        elif pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s):
-                            self.tgtMAC = False
-
-                            ## MAC verification
-                            if pkt.addr1 in self.shake.availTgts:
-                                self.tgtMAC = pkt.addr1
-                            elif pkt.addr2 in self.shake.availTgts:
-                                self.tgtMAC = pkt.addr2
-
-                            ## Pass the packet
-                            if self.tgtMAC:
-                                self.handler(q, self.m, pkt, args)
-                            else:
-                                pass
-                        else:
-                            pass
-                    except Empty:
-                        pass
-
-            ## BSSID filtering and NO Speedpatch
-            elif args.bssid and args.b:
-                print('No Speedpatch && BSSID filtering')
-                #print 'BSSID filtering and NO Speedpatch\n'
-                while True:
-                    try:
-                        x = q.qsize()
-                        if x > self.bp:
-                            if time.time() - warningTimer > 5:
-                                print('                                                                               {0} backpressure warning'.format(q.qsize()))
-                                warningTimer = time.time()
-                        pkt = q.get(timeout = 1)
-                        if pkt.haslayer(EAPOL):
-                            self.shake.eapolGrab(pkt)
-
-                        elif (pkt[Dot11].addr1 == args.bssid and pkt[Dot11].FCfield == 65 and len(pkt) >= int(args.s)) or (pkt[Dot11].addr2 == args.bssid and pkt[Dot11].FCfield == 66 and len(pkt) >= int(args.s)):
-                            self.tgtMAC = False
-
-                            ## MAC verification
-                            if pkt.addr1 in self.shake.availTgts:
-                                self.tgtMAC = pkt.addr1
-                            elif pkt.addr2 in self.shake.availTgts:
-                                self.tgtMAC = pkt.addr2
-
-                            ## Pass the packet
-                            if self.tgtMAC:
-                                self.handler(q, self.m, pkt, args)
-                            else:
-                                pass
-                        else:
-                            pass
-                    except Empty:
-                        pass
+                ## Process and finish out the task
+                else:
+                    self.packethandler.process(self.m, pkt, args)
+                    q.task_done()
+            except Empty:
+                pass

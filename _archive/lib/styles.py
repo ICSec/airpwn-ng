@@ -10,7 +10,10 @@ class File(object):
         """Handle injection using the contents of a given file"""
 
         ## Victim parameters
-        vp = VictimParameters(inject_file = args.injection)
+        if args.covert:
+            vp = VictimParameters(inject_file = args.injection, covert = args.covert)
+        else:
+            vp = VictimParameters(inject_file = args.injection)
 
         ## Broadcast mode
         if not args.t:
@@ -27,4 +30,4 @@ class File(object):
 
         ## Begin sniffing
         snif = Sniffer(ph, args, m = args.m)
-        snif.threaded_sniff(args)
+        snif.threaded_sniff(args) ## Here

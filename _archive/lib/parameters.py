@@ -15,6 +15,9 @@ class VictimParameters(object):
         self.inject_file = keyword_parameters.get('inject_file')
         self.in_request = keyword_parameters.get('in_request')
         self.in_request_handler = keyword_parameters.get('in_request_handler')
+        self.covert = keyword_parameters.get('covert')
+        if self.covert is None:
+            self.covert = False
 
         if self.inject_file is None and self.in_request is None:
             print ('[ERROR] Please specify victim parameters')

