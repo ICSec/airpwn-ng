@@ -37,7 +37,6 @@ class PacketHandler(object):
 
         ## Argument handling
         args = keyword_parameters.get('Args')
-        self.nic = args.mon
 
         ## Trigger setup
         if args.trigger is None:
@@ -58,23 +57,14 @@ class PacketHandler(object):
             ## Trigger check
             request = self.requestExtractor(packet)
             if self.trigger in request:
-
-                ## airtun-ng
-                if args.tun is True:
+                if args.tun is False:
+                    rtrmac = packet.getlayer(Dot11).addr1
+                    vicmac = packet.getlayer(Dot11).addr2
+                    dstmac = packet.getlayer(Dot11).addr3
+                else:
                     rtrmac = packet.getlayer(Ether).dst
                     vicmac = packet.getlayer(Ether).src
                     dstmac = None
-
-                ## monitor mode
-                if self.nic == 'mon':
-                    if args.tun is False:
-                        rtrmac = packet.getlayer(Dot11).addr1
-                        vicmac = packet.getlayer(Dot11).addr2
-                        dstmac = packet.getlayer(Dot11).addr3
-                    else:
-                        rtrmac = packet.getlayer(Ether).dst
-                        vicmac = packet.getlayer(Ether).src
-                        dstmac = None
 
                 ## all
                 vicip = packet.getlayer(IP).src
