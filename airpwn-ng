@@ -45,15 +45,9 @@ def main(args):
     else:
         args.bWarn = 40
 
-    ## Lowercase BSSID
-    if args.bssid is not None:
-        args.bssid = args.bssid.lower()
-
     ## NIC types
     if args.inj is None:
         args.inj = 'mon'
-    if args.mon is None:
-        args.mon = 'mon'
 
     ## User printouts
     print ('\nairpwn-ng - The new and improved 802.11 packet injector\n')
@@ -61,15 +55,15 @@ def main(args):
     ### Add error checks
     ## Set channel if so desired
     if args.channel is not None:
-        print (Bcolors.OKGREEN + '[+] Setting NIC Channel(s) to %s' % args.channel + Bcolors.ENDC)
+        if args.tun is False:
+            print (Bcolors.OKGREEN + '[+] Setting NIC Channel(s) to %s' % args.channel + Bcolors.ENDC)
 
-        ## Set monitor nic
-        if args.mon == 'mon':
+            ## Set monitor nic
             channelSet(args.m, args.channel)
 
-        ## Set injector nic
-        if args.inj == 'mon':
-            channelSet(args.i, args.channel)
+            ## Set injector nic
+            if args.inj == 'mon':
+                channelSet(args.i, args.channel)
 
     ## Injection Logic
     # injection = 0
@@ -100,51 +94,36 @@ def main(args):
 if __name__ == '__main__':
     ## ARGUMENT PARSING
     parser = argparse.ArgumentParser(description = 'airpwn-ng - the new and improved 802.11 packet injector')
-    group = parser.add_mutually_exclusive_group(required = True)
-    group.add_argument('--injection',
-                       metavar = '<filename>',
-                       help = 'File with your injection code')
-
     parser.add_argument('-i',
-                        metavar = '<interface>',
-                        help = 'Your injection interface')
+                        help = 'Your injection interface',
+                        metavar = '<interface>')
     parser.add_argument('-m',
-                        metavar = '<interface>',
-                        help = 'Your monitor interface')
+                        help = 'Your monitor interface',
+                        metavar = '<interface>')
     parser.add_argument('-t',
-                        nargs = '*',
+                        help = 'Target MAC addresses',
                         metavar = '<MAC address>',
-                        help = 'Target MAC addresses')
+                        nargs = '*')
     parser.add_argument('-w',
-                        help = 'Backpressure value')
-    parser.add_argument('--bssid',
-                        metavar = '<tgt BSSID>',
-                        help = 'Target BSSID')
+                        help = 'Backpressure warning value',
+                        metavar = 'Backpressure warning value')
     parser.add_argument('--channel',
-                        metavar = '<channel>',
-                        help = 'Set the channel for the NICs')
-    parser.add_argument('--essid',
-                        metavar = '<tgt ESSID>',
-                        help = 'Target ESSID')
+                        help = 'Set the channel for the NICs',
+                        metavar = '<channel>')
     parser.add_argument('--inj',
                         choices = ['mon', 'man'],
-                        metavar = '<inj NIC type>',
-                        help = 'Injector NIC type - mon or man')
-    parser.add_argument('--mon',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
+                        help = 'Injector NIC type - mon or man',
+                        metavar = '<inj NIC type>')
+    parser.add_argument('--injection',
+                        metavar = '<filename>',
+                        help = 'File with your injection code',
+                        required = True)
     parser.add_argument('--trigger',
                         metavar = '<trigger>',
                         help = 'Trigger string for injection')
     parser.add_argument('--tun',
                         action = 'store_true',
                         help = 'airtun-ng integration')
-    parser.add_argument('--wep',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
-    parser.add_argument('--wpa',
-                        metavar = 'DO NOT USE - DEPRECATED',
-                        help = 'DO NOT USE - DEPRECATED')
     args = parser.parse_args()
 
     ## ADD SIGNAL HANDLER
