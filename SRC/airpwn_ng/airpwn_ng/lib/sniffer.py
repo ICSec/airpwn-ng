@@ -1,5 +1,5 @@
 import time
-from lib.visuals import Bcolors
+from .visuals import Bcolors
 from queue import Queue, Empty
 from scapy.layers.dot11 import Dot11, Dot11FCS, Dot11WEP
 from scapy.layers.eap import EAPOL

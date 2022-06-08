@@ -1,4 +1,4 @@
-from lib.injector import Injector
+from .injector import Injector
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11QoS
 from scapy.layers.l2 import Ether, LLC, SNAP
 from scapy.layers.inet import IP, TCP

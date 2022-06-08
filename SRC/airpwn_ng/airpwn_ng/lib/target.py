@@ -1,4 +1,4 @@
-from lib.visuals import Bcolors
+from .visuals import Bcolors
 
 class Target(object):
     """A leftover class from the original airpwn-ng implementation.

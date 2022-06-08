@@ -5,8 +5,8 @@ import os
 import signal
 import subprocess
 import sys
-from lib.styles import File
-from lib.visuals import Bcolors
+from airpwn_ng.lib.styles import File
+from airpwn_ng.lib.visuals import Bcolors
 
 def channelSet(nic, chan):
     """Set the channel for a given NIC"""
@@ -48,7 +48,7 @@ def main(args):
         args.inj = 'mon'
 
     ## User printouts
-    print ('\nairpwn-ng - The new and improved 802.11 packet injector\n')
+    print (Bcolors.HEADER + '\n[+] airpwn-ng v2.0' + Bcolors.ENDC)
 
     ## Set channel if so desired
     if args.channel is not None:
@@ -84,14 +84,12 @@ def main(args):
             for target in args.t:
                 print (Bcolors.OKGREEN + '[+] Adding target ' + Bcolors.OKBLUE + target + Bcolors.ENDC)
 
-    ## Injection file used
-    style = File()
-
     ## Launch the handler
+    style = File()
     style.handler(args)
 
-
 if __name__ == '__main__':
+
     ## ARGUMENT PARSING
     parser = argparse.ArgumentParser(description = 'airpwn-ng - the new and improved 802.11 packet injector')
     parser.add_argument('-i',

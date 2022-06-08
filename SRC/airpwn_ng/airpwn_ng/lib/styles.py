@@ -1,7 +1,7 @@
-from lib.packet_handler import PacketHandler
-from lib.parameters import TargetParameters
-from lib.sniffer import Sniffer
-from lib.target import Target
+from .packet_handler import PacketHandler
+from .parameters import TargetParameters
+from .sniffer import Sniffer
+from .target import Target
 
 class File(object):
     """Inject based upon a single file"""
