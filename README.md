@@ -54,8 +54,6 @@ python3 ./airpwn-ng -i <Injecting NIC> -m at0 --tun --injection payloads/demo --
 
 ### Known issues
 * [edgedressing](https://github.com/stryngs/edgedressing) will affect most modern Windows clients in a negative way.  In order to deal with how Windows figures out if it is online, the --trigger functionality should be utilized.  By default if --trigger is not called then 'GET /' becomes the string that airpwn-ng uses for understanding if an injection should occur or not.  This behavior is not ideal and may cause a Windows target to have connectivity issues if not adjusted for.
-* BSSID and MAC Targeting needs further testing for bugs.
-* Removal of older options is currently underway, anything marked deprecated will eventually be removed.
 
 ### Disclaimer
 Illicit usage of this code has the potential to land the user in Legal and/or Civil jeopardy if used for malicious purposes or even unknowingly by perhaps using the wrong MAC filter as an example.  Ensure you know what the syntax you are running actually does.  Even better, have a glance at the source code to make sure for yourself.  Better than that, help us write a wiki on how this whole thing is put together for the betterment of society.  airpwn-ng is a tool meant for legal and ethical purposes.  The authors of airpwn-ng, airpwn and pretty much every other hacking tool out there take no, zip, zilch, zero and nada on the responsibility for what you the user does with it.
