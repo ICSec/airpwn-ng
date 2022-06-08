@@ -1,15 +1,8 @@
 import binascii
-from queue import Queue, Empty
 
-class VictimParameters(object):
-    """An instance of this class is always necessary to run the application
-
-    This class holds your injections.
-
-    Define victim detection parameters.
-    For targeted mode, this is a property of Victim.
-    For broadcast mode, this is a property of PacketHandler
-    """
+class TargetParameters(object):
+    """An instance of this class is always necessary to run the application as
+    it holds the injections."""
 
     def __init__(self, *positional_parameters, **keyword_parameters):
         self.inject_file = keyword_parameters.get('inject_file')
@@ -17,7 +10,7 @@ class VictimParameters(object):
         self.in_request_handler = keyword_parameters.get('in_request_handler')
 
         if self.inject_file is None and self.in_request is None:
-            print ('[ERROR] Please specify victim parameters')
+            print ('[ERROR] Please specify target parameters')
             exit(1)
 
         if self.in_request is not None and self.inject_file is None:

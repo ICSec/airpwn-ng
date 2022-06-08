@@ -1,4 +1,3 @@
-import sys
 import time
 from lib.visuals import Bcolors
 from queue import Queue, Empty
@@ -22,11 +21,31 @@ class Sniffer(object):
 
         ## Backpressure warnings
         self.bp = args.bWarn
+        self.bssid = args.bssid
+        self.tgtList = args.t
 
 
     def sniff(self, q):
         """Target function for Queue (multithreading)"""
-        sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
+        if self.tgtList is None:
+            if self.bssid is None:
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
+            else:
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'ether host {0}'.format(self.bssid))
+        else:
+            tStr = str()
+            if self.bssid is None:
+                for tgt in range(len(self.tgtList) - 1):
+                    tStr += 'ether host {0} or '.format(self.tgtList[tgt])
+                tStr += 'ether host {0}'.format(self.tgtList.pop())
+            else:
+                tStr += '('
+                for tgt in range(len(self.tgtList) - 1):
+                    tStr += 'ether host {0} or '.format(self.tgtList[tgt])
+                tStr += 'ether host {0})'.format(self.tgtList.pop())
+                tStr += ' and ether host {0}'.format(self.bssid)
+            sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = '{0}'.format(tStr))
+
 
 
     def threaded_sniff(self, args):
@@ -38,10 +57,6 @@ class Sniffer(object):
         Useful reminder:
             to-DS is:    1 (open) / 65 (crypted)
             from-DS is:  2 (open) / 66 (crypted)
-
-        Need to look into sending other than 1/65 or 2/66
-        Probably get more success...
-
         """
         q = Queue()
         sniffer = Thread(target = self.sniff, args = (q,))
