@@ -1,7 +1,7 @@
 import scapy.arch
 import time
-from lib.headers import Headers
-from lib.visuals import Bcolors
+from .headers import Headers
+from .visuals import Bcolors
 from scapy.config import conf
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11QoS
 from scapy.layers.inet import IP, TCP

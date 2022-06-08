@@ -1,5 +1,3 @@
-import binascii
-
 class TargetParameters(object):
     """An instance of this class is always necessary to run the application as
     it holds the injections."""
