@@ -13,8 +13,8 @@ class Sniffer(object):
     for packets received from scapy's sniff() function.
     """
 
-    def __init__(self, packethandler, args, *positional_parameters, **keyword_parameters):
-        self.m = keyword_parameters.get('m')
+    def __init__(self, packethandler, args):
+        self.m = args.m
 
         ## Create the handler
         self.packethandler = packethandler

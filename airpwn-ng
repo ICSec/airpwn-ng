@@ -5,131 +5,21 @@ import os
 import signal
 import subprocess
 import sys
-from airpwn_ng.lib.styles import File
-from airpwn_ng.lib.visuals import Bcolors
-
-def channelSet(nic, chan):
-    """Set the channel for a given NIC"""
-    subprocess.call('iwconfig {0} channel {1}'.format(nic, chan), shell = True)
-
-
-def crtlC(args):
-    """Handle CTRL+C."""
-    def tmp(signal, frame):
-        print (Bcolors.FAIL + '\n[!] Stopping injection and exiting airpwn-ng ...' + Bcolors.ENDC)
-        sys.exit(0)
-    return tmp
-
-
-def injection_check(args):
-    """Injection file check"""
-    try:
-        f = open(args.injection, 'r')
-        f.close()
-    except:
-        print (Bcolors.FAIL + '[!] Selected injection file', args.injection, 'does not exist.' + Bcolors.ENDC)
-        exit(1)
-    print (Bcolors.OKGREEN + '[+] Loaded injection file {0}'.format(str(args.injection)) + Bcolors.ENDC)
-    injection = 1
-    return injection
-
-
-def main(args):
-    """Launching logic"""
-
-    ## Backpressure defaults
-    if args.w is not None:
-        args.bWarn = int(args.w)
-    else:
-        args.bWarn = 40
-
-    ## NIC types
-    if args.inj is None:
-        args.inj = 'mon'
-
-    ## User printouts
-    print (Bcolors.HEADER + '\n[+] airpwn-ng v2.0' + Bcolors.ENDC)
-
-    ## Set channel if so desired
-    if args.channel is not None:
-        if args.tun is False:
-            print (Bcolors.OKGREEN + '[+] Setting NIC Channel(s) to %s' % args.channel + Bcolors.ENDC)
-
-            ## Set monitor nic
-            channelSet(args.m, args.channel)
-
-            ## Set injector nic
-            if args.inj == 'mon':
-                channelSet(args.i, args.channel)
-
-    ## Injection Logic
-    injection = injection_check(args)
-
-    ## BSSID announce
-    if args.bssid is not None:
-        print (Bcolors.OKGREEN + '[+] Adding BSSID  ' + Bcolors.OKBLUE + args.bssid + Bcolors.ENDC)
-
-    ## Broadcast mode
-    if args.t is None:
-        print (Bcolors.WARNING + '[!] You are starting your attack in broadcast mode.')
-        print ('[!] This means you will inject packets into all clients you are able to detect.')
-        print ('[!] Use with caution.' + Bcolors.ENDC)
-
-    ## Targeted mode
-    else:
-        if len(args.t) == 0:
-            print (Bcolors.WARNING + '[!] You must specify at least one target MAC address with -t for targeted mode')
-            exit(1)
-        else:
-            for target in args.t:
-                print (Bcolors.OKGREEN + '[+] Adding target ' + Bcolors.OKBLUE + target + Bcolors.ENDC)
-
-    ## Launch the handler
-    style = File()
-    style.handler(args)
+from airpwn_ng.lib.core import Core
+from airpwn_ng.lib.menu import Menu
 
 if __name__ == '__main__':
 
-    ## ARGUMENT PARSING
-    parser = argparse.ArgumentParser(description = 'airpwn-ng - the new and improved 802.11 packet injector')
-    parser.add_argument('-i',
-                        help = 'Your injection interface',
-                        metavar = '<interface>')
-    parser.add_argument('-m',
-                        help = 'Your monitor interface',
-                        metavar = '<interface>')
-    parser.add_argument('-t',
-                        help = 'Target MAC addresses',
-                        metavar = '<MAC address>',
-                        nargs = '*')
-    parser.add_argument('-w',
-                        help = 'Backpressure warning value',
-                        metavar = 'Backpressure warning value')
-    parser.add_argument('--bssid',
-                        help = 'Filter for a given BSSID',
-                        metavar = 'Filter for a given BSSID')
-    parser.add_argument('--channel',
-                        help = 'Set the channel for the NICs',
-                        metavar = '<channel>')
-    parser.add_argument('--inj',
-                        choices = ['mon', 'man'],
-                        help = 'Injector NIC type - mon or man',
-                        metavar = '<inj NIC type>')
-    parser.add_argument('--injection',
-                        metavar = '<filename>',
-                        help = 'File with your injection code',
-                        required = True)
-    parser.add_argument('--trigger',
-                        metavar = '<trigger>',
-                        help = 'Trigger string for injection')
-    parser.add_argument('--tun',
-                        action = 'store_true',
-                        help = 'airtun-ng integration')
-    args = parser.parse_args()
+    ## Menu creation
+    menu = Menu()
+    args = menu.parser.parse_args()
 
-    ## ADD SIGNAL HANDLER
-    signal_handler = crtlC(args)
+    ## Import airpwn-ng
+    airPwn = Core(args)
+
+    ## Signal handler
+    signal_handler = airPwn.crtlC(args)
     signal.signal(signal.SIGINT, signal_handler)
 
     ## Launch
-    main(args)
+    airPwn.main()
