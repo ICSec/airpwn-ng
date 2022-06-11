@@ -12,7 +12,7 @@ airpwn-ng is based on the concepts laid out in [Airpwn](http://airpwn.sourceforg
 * [Scapy](https://github.com/secdev/scapy)
 
 ## Installation
-Wwith scapy at version 2.4.5 and Aircrack-NG at 1.7 or greater run the following:
+With scapy at version 2.4.5 and Aircrack-NG at 1.7 or greater run the following:
 ```
 python3 -m pip install RESOURCEs/airpwn-ng-*.tar.gz
 ```

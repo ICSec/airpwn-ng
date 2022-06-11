@@ -12,13 +12,13 @@ from scapy.sendrecv import __gen_send as gs
 class Injector(object):
     """Uses scapy to inject packets on the networks"""
 
-    def __init__(self, interface, args):
-        self.interface = interface
+    def __init__(self, args):
+        self.interface = args.i
         self.args = args
         self.hdr = Headers()
-        self.injSocket = conf.L2socket(iface = interface)
+        self.injSocket = conf.L2socket(iface = self.interface)
         if (args.m != args.i) or args.tun is True:
-            self.injMac = scapy.arch.get_if_hwaddr(interface)
+            self.injMac = scapy.arch.get_if_hwaddr(self.interface)
 
     def inject(self,
                tgtmac,
