@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name = 'airpwn-ng',
-    version = '2.0.6',
+    version = '2.0.8',
     author = 'stryngs and Jack64',
     packages = ['airpwn_ng', 'airpwn_ng.lib'],
     include_package_data = True,

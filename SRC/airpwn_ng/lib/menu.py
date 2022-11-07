@@ -1,6 +1,7 @@
 import argparse
 
 class Menu(object):
+    __slots__ = ('parser',)
 
     def __init__(self):
         self.parser = argparse.ArgumentParser(description = 'airpwn-ng - the new and improved 802.11 packet injector')

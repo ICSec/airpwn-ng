@@ -1,6 +1,11 @@
 class TargetParameters(object):
     """An instance of this class is always necessary to run the application as
     it holds the injections."""
+    __slots__ = ('file_inject',
+                 'file_injected',
+                 'in_request',
+                 'in_request_handler',
+                 'inject_file')
 
     def __init__(self, *positional_parameters, **keyword_parameters):
         self.inject_file = keyword_parameters.get('inject_file')

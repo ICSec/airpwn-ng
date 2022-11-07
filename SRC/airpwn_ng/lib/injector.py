@@ -1,6 +1,5 @@
 import scapy.arch
 import time
-from .headers import Headers
 from .visuals import Bcolors
 from scapy.config import conf
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11QoS
@@ -11,14 +10,28 @@ from scapy.sendrecv import __gen_send as gs
 
 class Injector(object):
     """Uses scapy to inject packets on the networks"""
+    __slots__ = ('interface',
+                 'args',
+                 'injSocket',
+                 'injMac')
 
     def __init__(self, args):
         self.interface = args.i
         self.args = args
-        self.hdr = Headers()
         self.injSocket = conf.L2socket(iface = self.interface)
         if (args.m != args.i) or args.tun is True:
             self.injMac = scapy.arch.get_if_hwaddr(self.interface)
+
+
+    def hdrGen(self, injection):
+        """ Create the HTML headers """
+        return '\r\n'.join(['HTTP/1.1 200 OK',
+                            'Date: {}'.format(time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())),
+                            'Server: Apache',
+                            'Content-Length: {}'.format(len(injection)),
+                            'Connection: close',
+                            'Content-Type: text/html\r\n\r\n'])
+
 
     def inject(self,
                tgtmac,
@@ -40,10 +53,6 @@ class Injector(object):
 
         FIN/ACK flag is sent to the target with this method.
         """
-
-        ## Headers
-        headers = self.hdr.default(injection)
-
         if self.args.tun is False:
 
             ## Monitor injection
@@ -69,7 +78,7 @@ class Injector(object):
                               ack = int(acknum)
                              )\
                          /Raw(
-                              load = headers + injection
+                              load = self.hdrGen(injection) + injection
                              )
 
                 if TSVal is not None and TSecr is not None:
@@ -86,7 +95,6 @@ class Injector(object):
                                           ]
             ## Managed injection
             else:
-                headers = self.hdr.default(injection)
                 packet = Ether(
                                src = self.injMac,\
                                dst = tgtmac\
@@ -103,7 +111,7 @@ class Injector(object):
                               ack = int(acknum)
                              )\
                          /Raw(
-                              load = headers + injection
+                              load = self.hdrGen(injection) + injection
                              )
 
                 if TSVal is not None:
@@ -122,7 +130,6 @@ class Injector(object):
         ## Managed
         else:
             try:
-                headers = self.hdr.default(injection)
                 packet = Ether(
                                src = self.injMac,\
                                dst = tgtmac\
@@ -139,7 +146,7 @@ class Injector(object):
                               ack = int(acknum)
                              )\
                          /Raw(
-                              load = headers + injection
+                              load = self.hdrGen(injection) + injection
                              )
 
                 if TSVal is not None:

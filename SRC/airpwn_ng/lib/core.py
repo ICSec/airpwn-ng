@@ -3,10 +3,14 @@ import os
 import signal
 import subprocess
 import sys
-from airpwn_ng.lib.styles import File
+# from airpwn_ng.lib.styles import File
 from airpwn_ng.lib.visuals import Bcolors
+from airpwn_ng.lib.packet_handler import PacketHandler
+from airpwn_ng.lib.parameters import TargetParameters
+from airpwn_ng.lib.sniffer import Sniffer
 
 class Core(object):
+    __slots__ = ('args',)
 
     def __init__(self, args):
         self.args = args
@@ -73,7 +77,7 @@ class Core(object):
         ## Broadcast mode
         if self.args.t is None:
             print (Bcolors.WARNING + '[!] You are in broadcast mode.')
-            print ('[!] This means you will inject packets into all targetss you are able to detect.')
+            print ('[!] This means you will inject packets into all targets you are able to detect.')
             print ('[!] Use with caution.' + Bcolors.ENDC)
 
         ## Targeted mode
@@ -85,6 +89,12 @@ class Core(object):
                 for target in self.args.t:
                     print (Bcolors.OKGREEN + '[+] Adding target ' + Bcolors.OKBLUE + target + Bcolors.ENDC)
 
-        ## Launch the handler
-        style = File()
-        style.handler(self.args)
+        ## Target parameters
+        tp = TargetParameters(inject_file = self.args.injection)
+
+        ## Packet handling
+        ph = PacketHandler(self.args, tp)
+
+        ## Begin sniffing
+        snif = Sniffer(ph, self.args)
+        snif.threaded_sniff(self.args)

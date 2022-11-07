@@ -12,6 +12,11 @@ class Sniffer(object):
     It uses an instance of PacketHandler as the processing engine
     for packets received from scapy's sniff() function.
     """
+    __slots__ = ('bp',
+                 'bssid',
+                 'm',
+                 'packethandler',
+                 'tgtList')
 
     def __init__(self, packethandler, args):
         self.m = args.m
