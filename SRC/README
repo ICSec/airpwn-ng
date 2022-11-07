@@ -33,6 +33,7 @@ WEP using 1 NIC with airtun-ng
 ```
 ## Typical usage
 airtun-ng -a <BSSID> -w <WEPKEY> <Monitoring NIC>
+ifconfig at0 up
 python3 ./airpwn-ng -i at0 -m at0 --injection payloads/demo --tun
 ```
 
@@ -40,6 +41,7 @@ WEP using 2 NICs with airtun-ng
 ```
 ## Niche usage
 airtun-ng -a <BSSID> -w <WEPKEY> <Monitoring NIC>
+ifconfig at0 up
 python3 ./airpwn-ng -i <Injecting NIC> -m at0 --injection payloads/demo --inj man --tun
 ```
 
@@ -47,6 +49,7 @@ WPA using 1 NIC with airtun-ng
 ```
 ## Typical usage
 airtun-ng -a <BSSID> -e <ESSID> -p <PSK> <Monitoring NIC>
+ifconfig at0 up
 python3 ./airpwn-ng -i at0 -m at0 --tun --injection payloads/demo
 ```
 
@@ -54,6 +57,7 @@ WPA using 2 NICs with airtun-ng
 ```
 ## Niche usage
 airtun-ng -a <BSSID> -e <ESSID> -p <PSK> <Monitoring NIC>
+ifconfig at0 up
 python3 ./airpwn-ng -i <Injecting NIC> -m at0 --tun --injection payloads/demo --inj man
 ```
 
