@@ -6,19 +6,17 @@ from scapy.packet import Raw
 
 class PacketHandler(object):
     """This class does all the heavy-lifting."""
+    __slots__ = ('i',
+                 'injector',
+                 'target_parameters',
+                 'trigger')
 
     def __init__(self, args, tp):
         self.i = args.i
         self.target_parameters = tp
-
-        # print(keyword_parameters)
-
         if self.i is None:
             print ('[ERROR] No injection interface selected')
             exit(1)
-
-        ## Argument handling
-        # args = keyword_parameters.get('Args')
 
         ## Trigger setup
         if args.trigger is None:
@@ -63,7 +61,7 @@ class PacketHandler(object):
                 TSVal = None
                 TSecr = None
 
-            # print(tgtmac, rtrmac, tgtip, svrip, tgtport, svrport, acknum, seqnum, request, TSVal, TSecr)
+            # print(tgtmac, rtrmac, dstmac, tgtip, svrip, tgtport, svrport, acknum, seqnum, request, TSVal, TSecr)
             return (tgtmac,
                     rtrmac,
                     dstmac,

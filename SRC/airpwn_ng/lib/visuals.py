@@ -2,7 +2,7 @@ import os
 
 class Bcolors(object):
     """Define the color schema"""
-
+    __slots__ = tuple()
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
