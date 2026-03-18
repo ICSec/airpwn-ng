@@ -77,16 +77,13 @@ class Sniffer(object):
                         print('                                                                               {0} backpressure warning'.format(q.qsize()))
                         warningTimer = time.time()
                 pkt = q.get(timeout = 1)
-                if args.tun is False:
-
-                    ## Process and finish out the task
-                    if pkt[Dot11].FCfield == 1:
+                try:
+                    if args.tun is False:
+                        if pkt[Dot11].FCfield & (1 << 0):
+                            self.packethandler.process(self.m, pkt, args)
+                    else:
                         self.packethandler.process(self.m, pkt, args)
-                        q.task_done()
-
-                ## Process and finish out the task
-                else:
-                    self.packethandler.process(self.m, pkt, args)
+                finally:
                     q.task_done()
             except Empty:
                 pass
