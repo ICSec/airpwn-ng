@@ -59,7 +59,7 @@ class Injector(object):
             if self.args.inj == 'mon':
                 packet = RadioTap()\
                          /Dot11(
-                                FCfield = 'from-DS',
+                                FCfield = 2,
                                 addr1 = tgtmac,
                                 addr2 = rtrmac,
                                 addr3 = dstmac
