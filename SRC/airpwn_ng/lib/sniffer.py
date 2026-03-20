@@ -79,7 +79,11 @@ class Sniffer(object):
                 pkt = q.get(timeout = 1)
                 try:
                     if args.tun is False:
-                        if pkt[Dot11].FCfield & (1 << 0):
+                        # Driver? workaround from foxHunter.py ln# 7 (https://github.com/stryngs/foxHunter/commit/2b5d99562688911937ebc3ddd319ced122488f56)
+                        if not hasattr(pkt, 'FCfield'):
+                            continue
+
+                        if pkt[Dot11].FCfield.to_DS:
                             self.packethandler.process(self.m, pkt, args)
                     else:
                         self.packethandler.process(self.m, pkt, args)
