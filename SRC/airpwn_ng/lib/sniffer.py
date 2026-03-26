@@ -31,12 +31,15 @@ class Sniffer(object):
 
 
     def sniff(self, q):
-        """Target function for Queue (multithreading)"""
+        """Target function for Queue (multithreading)
+        
+        Ignores frames with the FromDS bit set.
+        """
         if self.tgtList is None:
             if self.bssid is None:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
             else:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'ether host {0}'.format(self.bssid))
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'ether host {self.bssid}')
         else:
             tStr = str()
             if self.bssid is None:
@@ -58,10 +61,6 @@ class Sniffer(object):
 
         It uses the PacketHandler.process function.
         Call this function to begin actual sniffing + injection.
-
-        Useful reminder:
-            to-DS is:    1 (open) / 65 (crypted)
-            from-DS is:  2 (open) / 66 (crypted)
         """
         q = Queue()
         sniffer = Thread(target = self.sniff, args = (q,))
@@ -79,7 +78,11 @@ class Sniffer(object):
                 pkt = q.get(timeout = 1)
                 try:
                     if args.tun is False:
-                        if pkt[Dot11].FCfield & (1 << 0):
+                        # Driver? workaround from foxHunter.py ln# 7 (https://github.com/stryngs/foxHunter/commit/2b5d99562688911937ebc3ddd319ced122488f56)
+                        if not hasattr(pkt, 'FCfield'):
+                            continue
+
+                        if pkt[Dot11].FCfield.to_DS:
                             self.packethandler.process(self.m, pkt, args)
                     else:
                         self.packethandler.process(self.m, pkt, args)
