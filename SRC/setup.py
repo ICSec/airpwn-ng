@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name = 'airpwn-ng',
-      version = '2.4.2',
+      version = '2.4.4',
       author = 'stryngs and Jack64',
       packages = ['airpwn_ng', 'airpwn_ng.lib'],
       include_package_data = True,
