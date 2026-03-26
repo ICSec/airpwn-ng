@@ -31,12 +31,15 @@ class Sniffer(object):
 
 
     def sniff(self, q):
-        """Target function for Queue (multithreading)"""
+        """Target function for Queue (multithreading)
+        
+        Ignores frames with the FromDS bit set.
+        """
         if self.tgtList is None:
             if self.bssid is None:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
             else:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'ether host {0}'.format(self.bssid))
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'ether host {self.bssid}')
         else:
             tStr = str()
             if self.bssid is None:
@@ -58,10 +61,6 @@ class Sniffer(object):
 
         It uses the PacketHandler.process function.
         Call this function to begin actual sniffing + injection.
-
-        Useful reminder:
-            to-DS is:    1 (open) / 65 (crypted)
-            from-DS is:  2 (open) / 66 (crypted)
         """
         q = Queue()
         sniffer = Thread(target = self.sniff, args = (q,))
