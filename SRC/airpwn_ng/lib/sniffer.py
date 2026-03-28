@@ -16,10 +16,12 @@ class Sniffer(object):
                  'bssid',
                  'm',
                  'packethandler',
-                 'tgtList')
+                 'tgtList',
+                 'tun')
 
     def __init__(self, packethandler, args):
         self.m = args.m
+        self.tun = args.tun
 
         ## Create the handler
         self.packethandler = packethandler
@@ -31,29 +33,47 @@ class Sniffer(object):
 
 
     def sniff(self, q):
-        """Target function for Queue (multithreading)
+        """Handles the logic for sniffing setup.
         
-        Ignores frames with the FromDS bit set.
+        Ignores frames with the FromDS bit set in Open for speed.
+        Encrypted expects airtun-ng or a retooling/implementation of pyDot11.
         """
-        if self.tgtList is None:
-            if self.bssid is None:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
-            else:
-                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'ether host {self.bssid}')
-        else:
-            tStr = str()
-            if self.bssid is None:
-                for tgt in range(len(self.tgtList) - 1):
-                    tStr += 'ether host {0} or '.format(self.tgtList[tgt])
-                tStr += 'ether host {0}'.format(self.tgtList.pop())
-            else:
-                tStr += '('
-                for tgt in range(len(self.tgtList) - 1):
-                    tStr += 'ether host {0} or '.format(self.tgtList[tgt])
-                tStr += 'ether host {0})'.format(self.tgtList.pop())
-                tStr += ' and ether host {0}'.format(self.bssid)
-            sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = '{0}'.format(tStr))
 
+        ## Open
+        if not self.tun:
+
+            ## Sniff all clients
+            if self.tgtList is None:
+
+                ## Sniff all BSSIDs
+                if self.bssid is None:
+                    sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = 'wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
+
+                ## Sniff one BSSID
+                else:
+                    sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'wlan addr1 {self.bssid} and wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
+
+            ## Sniff one client
+            else:
+
+                ## Sniff all BSSIDs
+                if self.bssid is None:
+                    sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'wlan addr2 {self.tgtList[0]} and wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
+
+                ## Sniff one BSSID
+                else:
+                    sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'wlan addr1 {self.bssid} and wlan addr2 {self.tgtList[0]} and wlan[1] & 0x01 != 0 and wlan[1] & 0x02 == 0')
+       
+        ## Encrypted
+        else:
+
+            ## Sniff everything
+            if self.tgtList is None:
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0)
+
+            ## Sniff targeted
+            else:
+                sniff(iface = self.m, prn = lambda x: q.put(x), store = 0, filter = f'ether host {self.tgtList[0]}')
 
 
     def threaded_sniff(self, args):
