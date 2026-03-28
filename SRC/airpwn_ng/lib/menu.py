@@ -12,9 +12,9 @@ class Menu(object):
                             help = 'Your monitor interface',
                             metavar = '<interface>')
         self.parser.add_argument('-t',
-                            help = 'Target MAC addresses',
+                            help = 'Target MAC address',
                             metavar = '<MAC address>',
-                            nargs = '*')
+                            nargs = '*') ### reminder to turn this back to multiple macs
         self.parser.add_argument('-w',
                             help = 'Backpressure warning value',
                             metavar = 'Backpressure warning value')
